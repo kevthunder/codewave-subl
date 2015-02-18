@@ -18,7 +18,7 @@ def initCmds():
 				"""
 				~~box~~
 				~~quote_carret~~
-					___         _   __      __
+				  ___         _   __      __
 				 / __|___  __| |__\ \    / /_ ___ ______
 				/ /__/ _ \/ _` / -_\ \/\/ / _` \ V / -_/
 				\____\___/\__,_\___|\_/\_/\__,_|\_/\___|
@@ -247,15 +247,12 @@ class EmmetCmd(command.BaseCommand):
 		self.abbr = self.instance.getParam([0,'abbr','abbreviation'])
 		self.lang = self.instance.getParam([1,'lang','language'])
 	def result(self):
-		import sys
-		import os.path
-		emmet_path = None # os.path.join(Npp.notepad.getNppDir(),'plugins','EmmetNPP')
-		if emmet_path not in sys.path :
-			sys.path.insert(0, emmet_path)
-		# import npp_emmet
-		res = None # npp_emmet.ctx.js().locals.emmet.expandAbbreviation(self.abbr)
-		if '${0}' in res :
-			res = res.replace('${0}','|')
-		return res
-
+		emmet_ctx = self.instance.codewave.editor.getEmmetContextObject()
+		if emmet_ctx is not None :
+			with emmet_ctx.js() as c:
+				res = c.locals.emmet.expandAbbreviation(self.abbr)
+				if res is not None :
+					if '${0}' in res :
+						res = res.replace('${0}','|')
+					return res
 

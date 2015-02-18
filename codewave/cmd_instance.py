@@ -165,7 +165,6 @@ class CmdInstance():
 				if res is not None:
 					if self.cmd.getOption('parse',self) :
 						parser = self.getParserForText(res)
-						logger.log('parsed ?',self)
 						res = parser.parseAll()
 					self.replaceWith(res)
 					return True
@@ -184,7 +183,8 @@ class CmdInstance():
 	def getIndent(self):
 		return self.pos - self.codewave.findLineStart(self.pos)
 	def applyIndent(self,text):
-		return re.sub(r'\n', '\n'+util.repeatToLength(" ",self.getIndent()),text,0,re.M)
+		reg = re.compile(r'\n',re.M)
+		return re.sub(reg, '\n'+util.repeatToLength(" ",self.getIndent()),text)
 	def replaceWith(self,text):
 		text = self.applyIndent(text)
 		

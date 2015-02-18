@@ -9,4 +9,6 @@ class Detector():
 class LangDetector(Detector):
 	def detect(self,finder):
 		if finder.codewave is not None :
-			return finder.codewave.editor.getLang().lower()
+			lang = finder.codewave.editor.getLang()
+			if lang is not None :
+				return lang.lower()
