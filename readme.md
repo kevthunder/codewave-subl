@@ -1,28 +1,26 @@
 # CodeWave
-Codewave for Sublime Text : Do everything from your favorite editor.
+
+Codewave for Sublime Text : The text editor helper.
+
+Create abbreviation for you own code snippets and expand them with a push of a button, or use those already provided. Write code faster with this tool designed to give you what you need to be more productive without leaving your favorite text editor.
+
+## Installation
+
+```sh
+cd path/to/sublime/Packages
+git clone https://github.com/kevthunder/codewave-subl.git Codewave
+```
+
+## Getting started
+
+* In any window press ```Ctrl+Shift+E``` ( or ```Cmd+Shift+E``` in osX)
+* Type ```help```
+* Press ```Ctrl+Shift+E``` again to show help
+```
+~~help~~
+```
 
 ## ToDo
 
-
-## from coffee
-```
-'True'  => 'True'
-'False' => 'False'
-'null'  => 'None'
-'++'    => '+=1'
-
-/@(\w)/                                   => 'self.$1'
-/\s([^\s]+): ->/                          => ' def $1\(self\):'
-/\s([^\s]+):\s*\(([^)]*)\)\s*->/          => ' def $1\(self,$2\):'
-/.substring\(/                            => '['    # closing bracket will need to be added manually
-/^(\s*(?:#\s)?(?:if|while|for)\W.*[^:])$/ => '$1:'
-/^(\s*(?:#\s)?)unless(\W.*[^:])$/         => '$1if not$2:'
-/^(\s*(?:#\s)?)else if(\W.*[^:]):?$/      => '$1elif$2:'
-/^(\s*(?:#\s)?else)$/                     => '$1:'
-/\[([^]]*)\.\.([^]]*)\]/                  => 'range\($1,$2\)'
-/([\w.]*)\.length/                        => 'len\($1\)'
-/\.shift\(/                               => '.pop\(0'
-/\.push\(/                                => '.append\('
-/([\w.]*)\.join\(([^)]+)\)/               => '$2.join\($1\)'
-/#\{([\w.]+)\}/                           => "'+$1+'"
-```
+* make closing promp work
+* See the main project https://github.com/kevthunder/codewave
