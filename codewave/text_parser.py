@@ -1,6 +1,7 @@
 import util
+import editor
 
-class TextParser():
+class TextParser(editor.Editor):
 	def __init__(self,text):
 		self.namespace = 'text_parser'
 		self._text = text

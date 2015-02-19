@@ -18,31 +18,42 @@ class ClosingPromp():
 		p2 = self.end+len(self.codewave.brakets)*3+len(self.codewave.closeChar)+2
 		self.openBounds = util.wrappedPos(  self.start, p1, p1, p1+len(self.codewave.brakets))
 		self.closeBounds = util.wrappedPos( self.end, p2, p2, p2+len(self.codewave.brakets))
-		
-		self.codewave.editor.setCursorPos(p2)
-		# Npp.editor.addSelection(p1,p1)
-		# Npp.editor.callback(self.onAddChar, [Npp.SCINTILLANOTIFICATION.CHARADDED])
+		if self.codewave.editor.allowMultiSelection() :
+			self.codewave.editor.setMultiSel([util.Pos(p2,p2),util.Pos(p1,p1)])
+			if self.codewave.editor.canListenToChange() :
+				self.codewave.editor.addChangeListener(self.onChange)
+		else : 
+			self.codewave.editor.setCursorPos(p1)
 		return self
-	def onAddChar(self,ch):
-		# logger.log('added :'+str(ch))
-		if ch['ch'] ==  32:
-			self.stop()
-			self.cleanClose()
+	def onChange(self,ch = None):
+		if ch is None or ch['ch'] ==  32:
+			if self.shouldStop() :
+				self.stop()
+				self.cleanClose()
+	def shouldStop(self):
+		if not self.updateBounds() :
+			return True
+		else : 
+			closeStr = self.codewave.editor.textSubstr(self.closeBounds.innerStart,self.closeBounds.innerEnd)
+			if ' ' in closeStr :
+				return True
+		return False
 	def cleanClose(self):
-		if self.updateBounds() :
+		if self.found :
 			closeStr = self.codewave.editor.textSubstr(self.closeBounds.innerStart,self.closeBounds.innerEnd)
 			self.codewave.editor.spliceText(self.closeBounds.innerStart,self.closeBounds.innerEnd,closeStr.strip())
-			Sels = None # Npp.editor.getSelections()
-			for i in reversed(range(0,Sels)):
-				s = None # Npp.editor.getSelectionNStart(i)
-				e = None # Npp.editor.getSelectionNEnd(i)
-				if s >= self.openBounds.innerStart and  s <= self.openBounds.innerEnd :
-					self.codewave.editor.setCursorPos(s,e)
+			sels = self.codewave.editor.getMultiSel()
+			change = False
+			for sel in sels:
+				if self.closeBounds.containsPos(sel) :
+					sels.remove(sel)
+					change = True
+			if change :
+				self.codewave.editor.setMultiSel(sels)
 	def stop(self):
 		if self.codewave.closingPromp == self :
 			self.codewave.closingPromp = None
-		# Npp.editor.clearCallbacks(self.onAddChar)
-		# Npp.editor.clearCallbacks([Npp.SCINTILLANOTIFICATION.CHARADDED])
+		self.codewave.editor.removeChangeListener(self.onChange)
 	def cancel(self):
 		if self.updateBounds() :
 			self.codewave.editor.beginUndoAction()

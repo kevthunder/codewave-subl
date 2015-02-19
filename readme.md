@@ -22,5 +22,4 @@ git clone https://github.com/kevthunder/codewave-subl.git Codewave
 
 ## ToDo
 
-* make closing promp work
 * See the main project https://github.com/kevthunder/codewave

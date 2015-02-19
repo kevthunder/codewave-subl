@@ -7,6 +7,9 @@ import codewave.storage
 
 import sublime, sublime_plugin
 
+def getBufferKey(view) :
+	return 'buffer_' + str(view.buffer_id())
+	
 class CodewaveCommand(sublime_plugin.TextCommand):
 	def run(self, edit):
 		print 'run CodewaveCommand'
@@ -30,15 +33,23 @@ class CodewaveCommand(sublime_plugin.TextCommand):
 			codewave.codewave.init()
 			codewaves = {}
 			
-		key = 'buffer_' + str(self.view.buffer_id())
+		key = getBufferKey(self.view)
 		if key in codewaves :
 			cw = codewaves[key]
 		else :
 			cw = codewave.codewave.Codewave(codewave_subl_editor.SublEditor(self.view))
-			# codewaves[key] = cw
+			codewaves[key] = cw
 		cw.editor.edit = edit
 		cw.onActivationKey()
 		
 	def printFunct(self,txt):
 		print txt
 
+class GoogleAutocomplete(sublime_plugin.EventListener):
+	def on_modified(self,view):
+		global codewaves
+		key = getBufferKey(view)
+		if key in codewaves :
+			cw = codewaves[key]
+			for callback in cw.editor.changeListeners :
+				callback()
