@@ -22,7 +22,7 @@ class CodewaveCommand(sublime_plugin.TextCommand):
 		if debug :
 			# reload
 			try :
-				for m in reversed(sys.modules.values()) :
+				for m in sys.modules.values() :
 					if hasattr(m,'__file__') and "codewave" in m.__file__.lower() :
 						print("reload :" + m.__name__)
 						imp.reload(m)
