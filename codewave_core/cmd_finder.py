@@ -20,7 +20,7 @@ class CmdFinder():
 		self.parent = parent
 		if namespaces is not None :
 			keywords['namespaces'] = namespaces 
-		for key, val in defaults.iteritems():
+		for key, val in defaults.items():
 			if key in keywords:
 				setattr(self,key,keywords[key])
 			elif parent is not None :
@@ -82,7 +82,7 @@ class CmdFinder():
 			return []
 		self.root.init()
 		posibilities = []
-		for space, names in self.getNamesWithPaths().iteritems():
+		for space, names in self.getNamesWithPaths().items():
 			next = self.root.getCmd(space)
 			if next is not None :
 				posibilities += CmdFinder(names,parent=self,root=next).findPosibilities()

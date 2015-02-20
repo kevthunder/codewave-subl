@@ -28,7 +28,7 @@ class Codewave():
 			'checkCarret' : True
 		}
 		
-		for key, val in defaults.iteritems():
+		for key, val in defaults.items():
 			if key in keywords:
 				setattr(self,key,keywords[key])
 			elif parent is not None :

@@ -31,7 +31,7 @@ def loadCmds():
 	global cmds
 	savedCmds = storage.load('cmds')
 	if savedCmds is not None :
-		for fullname, data in savedCmds.iteritems():
+		for fullname, data in savedCmds.items():
 			cmds.setCmd(fullname,Command(fullname.split(':').pop(),data))
 
 	
@@ -140,7 +140,7 @@ class Command():
 				instance.aliasedCmd = aliased or False
 			return aliased
 	def setOptions(self,data):
-		for key, val in data.iteritems():
+		for key, val in data.items():
 			if key in self.defaultOptions:
 				self.options[key] = val
 	def getOptions(self,instance = None):
