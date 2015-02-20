@@ -6,17 +6,33 @@ def _optKey(key,dict,defVal = None):
 	# optional Dictionary key
 	return dict[key] if key in dict else defVal
 
-cmdIniters = set()
+class InitialiserSet(set):
+	def add(self,initialiser):
+		existing = self.exists(initialiser)
+		if existing :
+			self.remove(existing)
+		super(InitialiserSet, self).add(initialiser)
+	def exists(self,initialiser):
+		print(initialiser.__module__ + initialiser.__name__)
+		for init in self:
+			if init.__module__ == initialiser.__module__ and init.__name__ == initialiser.__name__ :
+				return True
+		return False
+	
+if 'cmdInitialisers' not in vars() :
+	cmdInitialisers = InitialiserSet()
+	cmdIniters = cmdInitialisers
+	
 def initCmds():
 	global cmds
-	global cmdIniters
+	global cmdInitialisers
 	cmds = Command(None,{
 		'cmds':{
 			'hello':'Hello, World!'
 		}
 	})
-	for initer in cmdIniters:
-		initer()
+	for initialiser in cmdInitialisers:
+		initialiser()
 
 def saveCmd(fullname,data):
 	global cmds

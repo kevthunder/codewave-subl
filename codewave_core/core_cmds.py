@@ -72,7 +72,7 @@ def initCmds():
 		},
 	})
 	
-command.cmdIniters.add(initCmds)
+command.cmdInitialisers.add(initCmds)
 
 def set_var(name,instance):
 	val = None
