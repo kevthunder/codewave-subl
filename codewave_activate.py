@@ -1,11 +1,10 @@
 import os.path
-import codewave.codewave
-import codewave_subl_editor
-import codewave.logger
-import codewave.storage
-
-
 import sublime, sublime_plugin
+
+import codewave_core.codewave
+import codewave_subl_editor
+import codewave_core.logger
+import codewave_core.storage
 
 def getBufferKey(view) :
 	return 'buffer_' + str(view.buffer_id())
@@ -19,25 +18,25 @@ class CodewaveCommand(sublime_plugin.TextCommand):
 		if debug :
 			# reload
 			try :
-				reload(codewave.codewave)
+				reload(codewave_core.codewave)
 				reload(codewave_subl_editor)
-				reload(codewave.logger)
-				reload(codewave.storage)
+				reload(codewave_core.logger)
+				reload(codewave_core.storage)
 			except:
 				print "reload failed"
 			
 		if debug or 'codewaves' not in vars() or codewaves is None :
 			print 'init codewave'
-			codewave.logger.WRITE_FUNCT = self.printFunct
-			codewave.storage.CONFIG_FOLDER = os.path.join(sublime.packages_path(), 'Codewave')
-			codewave.codewave.init()
+			codewave_core.logger.WRITE_FUNCT = self.printFunct
+			codewave_core.storage.CONFIG_FOLDER = os.path.join(sublime.packages_path(), 'Codewave')
+			codewave_core.codewave.init()
 			codewaves = {}
 			
 		key = getBufferKey(self.view)
 		if key in codewaves :
 			cw = codewaves[key]
 		else :
-			cw = codewave.codewave.Codewave(codewave_subl_editor.SublEditor(self.view))
+			cw = codewave_core.codewave.Codewave(codewave_subl_editor.SublEditor(self.view))
 			codewaves[key] = cw
 		cw.editor.edit = edit
 		cw.onActivationKey()

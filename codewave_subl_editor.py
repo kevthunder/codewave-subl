@@ -1,8 +1,8 @@
 import sublime
-import codewave.editor
-import codewave.util
+import codewave_core.editor
+import codewave_core.util
 
-class SublEditor(codewave.editor.Editor):
+class SublEditor(codewave_core.editor.Editor):
 	def __init__(self,view):
 		self.view = view
 		self.edit = None
@@ -41,7 +41,7 @@ class SublEditor(codewave.editor.Editor):
 	def getMultiSel(self):
 		selections = []
 		for sel in self.view.sel() :
-			selections.append(codewave.util.Pos(sel.begin(), sel.end()))
+			selections.append(codewave_core.util.Pos(sel.begin(), sel.end()))
 		return selections
 	def canListenToChange(self):
 		return True
