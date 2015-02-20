@@ -1,5 +1,5 @@
-import util
-import editor
+import codewave_core.util as util
+import codewave_core.editor as editor
 
 class TextParser(editor.Editor):
 	def __init__(self,text):

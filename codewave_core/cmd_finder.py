@@ -1,6 +1,6 @@
-import command
-import core_cmds
-import logger
+import codewave_core.command as command
+import codewave_core.core_cmds as core_cmds
+import codewave_core.logger as logger
 
 reload(command)
 reload(core_cmds)

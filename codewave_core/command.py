@@ -1,5 +1,6 @@
-import storage
-import logger
+import codewave_core.storage as storage
+import codewave_core.logger as logger
+import codewave_core.codewave
 reload(storage)
 
 def _optKey(key,dict,defVal = None): 
@@ -132,8 +133,7 @@ class Command():
 			return instance.aliasedCmd or None
 		if self.aliasOf is not None :
 			if instance is None :
-				from codewave import Codewave
-				codewave = Codewave()
+				codewave = codewave_core.codewave.Codewave()
 			else :
 				codewave = instance.codewave
 			aliased = codewave.getCmd(self.aliasOf)

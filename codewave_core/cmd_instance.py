@@ -1,9 +1,9 @@
-import util
 import re
-import logger
-import command
-import codewave
-import text_parser
+import codewave_core.codewave
+import codewave_core.util as util
+import codewave_core.logger as logger
+import codewave_core.command as command
+import codewave_core.text_parser as text_parser
 reload(text_parser)
 
 class CmdInstance():
@@ -174,7 +174,7 @@ class CmdInstance():
 			if self.cmd.resultIsAvailable():
 				self.cmd.result(self)
 	def getParserForText(self,txt):
-		parser = codewave.Codewave(text_parser.TextParser(txt))
+		parser = codewave_core.codewave.Codewave(text_parser.TextParser(txt))
 		parser.context = self
 		parser.checkCarret = False
 		return parser

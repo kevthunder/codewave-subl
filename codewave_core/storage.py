@@ -1,6 +1,6 @@
 import os.path
 import json
-import logger
+import codewave_core.logger as logger
  
 CONFIG_FOLDER = None
 

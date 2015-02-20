@@ -1,9 +1,9 @@
-import command
-import util
-import logger
 import re
 import textwrap
-import detector
+import codewave_core.command as command
+import codewave_core.util as util
+import codewave_core.logger as logger
+import codewave_core.detector as detector
 
 reload(detector)
 

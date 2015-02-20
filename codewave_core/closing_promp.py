@@ -1,5 +1,5 @@
-import logger
-import util
+import codewave_core.logger as logger
+import codewave_core.util as util
 
 class ClosingPromp():
 	def __init__(self,codewave,start,end):

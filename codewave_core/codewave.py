@@ -1,18 +1,18 @@
-import logger
+import codewave_core.logger as logger
 reload(logger)
 
-import util
+import codewave_core.util as util
 reload(util)
 
-import cmd_instance
+import codewave_core.cmd_instance as cmd_instance
 reload(cmd_instance)
-import cmd_finder
+import codewave_core.cmd_finder as cmd_finder
 reload(cmd_finder)
-import text_parser
+import codewave_core.text_parser as text_parser
 reload(text_parser)
-import closing_promp
+import codewave_core.closing_promp as closing_promp
 reload(closing_promp)
-import command
+import codewave_core.command as command
 
 def init():
 	command.initCmds()
