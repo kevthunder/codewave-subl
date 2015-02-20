@@ -4,7 +4,7 @@ def trimEmptyLine(txt) :
 def escapeRegExp(txt) :
 	return re.escape(txt)
 def repeatToLength(txt, length):
-   return (txt * ((length/len(txt))+1))[:length]
+   return (txt * (int(length/len(txt))+1))[:length]
 		
 class StrPos():
 	def __init__(self,pos,str):

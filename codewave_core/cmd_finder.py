@@ -46,7 +46,7 @@ class CmdFinder():
 		return paths
 	def applySpaceOnNames(self,space):
 		parts = space.split(':',1)
-		return map(lambda n: self._applySpaceOnName(n,parts) , self.names)
+		return list(map(lambda n: self._applySpaceOnName(n,parts) , self.names))
 	def _applySpaceOnName(self,name,spaceParts):
 		parts = name.split(':',1)
 		if len(parts) > 1 and parts[0] == spaceParts[0] :

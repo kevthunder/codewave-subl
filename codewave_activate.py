@@ -1,5 +1,9 @@
 import os.path
+import imp, sys
 import sublime, sublime_plugin
+
+BASE_PATH = os.path.abspath(os.path.dirname(__file__))
+sys.path += [BASE_PATH]
 
 import codewave_core.codewave
 import codewave_subl_editor
@@ -18,12 +22,12 @@ class CodewaveCommand(sublime_plugin.TextCommand):
 		if debug :
 			# reload
 			try :
-				reload(codewave_core.codewave)
-				reload(codewave_subl_editor)
-				reload(codewave_core.logger)
-				reload(codewave_core.storage)
-			except:
-				print("reload failed")
+				for m in reversed(sys.modules.values()) :
+					if hasattr(m,'__file__') and "codewave" in m.__file__.lower() :
+						print("reload :" + m.__name__)
+						imp.reload(m)
+			except Exception as e:
+				print("reload failed :" + str(e))
 			
 		if debug or 'codewaves' not in vars() or codewaves is None :
 			print('init codewave')

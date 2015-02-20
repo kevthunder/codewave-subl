@@ -10,7 +10,7 @@ class CmdInstance():
 		self.codewave,self.pos,self.str = codewave,pos,str
 		self.content = self.cmdObj = self.closingPos = None
 		self.replaceStart = self.replaceEnd = None
-		self.aliasedCmd = self.cmdOptions = None
+		self.cmd = self.aliasedCmd = self.cmdOptions = None
 		if not self.isEmpty():
 			self._checkCloser()
 			self.opening = self.str
@@ -188,7 +188,7 @@ class CmdInstance():
 		text = self.applyIndent(text)
 		
 		cursorPos = self.pos+len(text)
-		if self.codewave.checkCarret and self.cmd.getOption('checkCarret',self):
+		if self.cmd is not None and self.codewave.checkCarret and self.cmd.getOption('checkCarret',self):
 			p = self.codewave.getCarretPos(text)
 			if p is not None :
 				cursorPos = self.pos+p
