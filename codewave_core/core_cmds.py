@@ -211,7 +211,9 @@ class EditCmd(command.BaseCommand):
 			})
 			return ''
 	def resultWithoutContent(self):
-		if self.cmd and self.editable:
+		if not self.cmd or self.editable:
+			source = self.cmd.resultStr if self.cmd else '|'
+			name = self.cmd.fullName if self.cmd else self.cmdName
 			parser = self.instance.getParserForText(textwrap.dedent(
 				"""
 				~~box cmd:"%(cmd)s"~~
@@ -220,7 +222,7 @@ class EditCmd(command.BaseCommand):
 				~~/source~~
 				~~!save~~ ~~!close~~
 				~~/box~~
-				""") % {'cmd': self.instance.cmd.fullName + ' ' +self.cmd.name, 'source': self.cmd.resultStr})
+				""") % {'cmd': self.instance.cmd.fullName + ' ' +name, 'source': source})
 			return parser.getText() if self.verbalize else parser.parseAll()
 
 
