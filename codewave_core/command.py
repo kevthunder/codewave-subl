@@ -1,7 +1,6 @@
 import codewave_core.storage as storage
 import codewave_core.logger as logger
 import codewave_core.codewave
-reload(storage)
 
 def _optKey(key,dict,defVal = None): 
 	# optional Dictionary key

@@ -2,9 +2,6 @@ import codewave_core.command as command
 import codewave_core.core_cmds as core_cmds
 import codewave_core.logger as logger
 
-reload(command)
-reload(core_cmds)
-
 
 class CmdFinder():
 	def __init__(self,names,namespaces = None, parent=None, **keywords):

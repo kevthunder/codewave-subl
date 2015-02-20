@@ -5,8 +5,6 @@ import codewave_core.util as util
 import codewave_core.logger as logger
 import codewave_core.detector as detector
 
-reload(detector)
-
 
 def initCmds():
 	core = command.cmds.addCmd(command.Command('core'))

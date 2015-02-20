@@ -4,7 +4,6 @@ import codewave_core.util as util
 import codewave_core.logger as logger
 import codewave_core.command as command
 import codewave_core.text_parser as text_parser
-reload(text_parser)
 
 class CmdInstance():
 	def __init__(self,codewave,pos,str):
