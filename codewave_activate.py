@@ -11,7 +11,7 @@ def getBufferKey(view) :
 	
 class CodewaveCommand(sublime_plugin.TextCommand):
 	def run(self, edit):
-		print 'run CodewaveCommand'
+		print("run CodewaveCommand")
 		global codewaves
 		debug = True
 		
@@ -23,10 +23,10 @@ class CodewaveCommand(sublime_plugin.TextCommand):
 				reload(codewave_core.logger)
 				reload(codewave_core.storage)
 			except:
-				print "reload failed"
+				print("reload failed")
 			
 		if debug or 'codewaves' not in vars() or codewaves is None :
-			print 'init codewave'
+			print('init codewave')
 			codewave_core.logger.WRITE_FUNCT = self.printFunct
 			codewave_core.storage.CONFIG_FOLDER = os.path.join(sublime.packages_path(), 'Codewave')
 			codewave_core.codewave.init()
@@ -42,7 +42,7 @@ class CodewaveCommand(sublime_plugin.TextCommand):
 		cw.onActivationKey()
 		
 	def printFunct(self,txt):
-		print txt
+		print(txt)
 
 class GoogleAutocomplete(sublime_plugin.EventListener):
 	def on_modified(self,view):
