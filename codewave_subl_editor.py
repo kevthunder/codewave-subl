@@ -31,7 +31,10 @@ class SublEditor(codewave_core.editor.Editor):
 	def getLang(self):
 		return self.view.settings().get('syntax').split('/').pop().split('.')[0]
 	def getEmmetContextObject(self):
-		return __import__("emmet-plugin").ctx
+		module = __import__("emmet-plugin")
+		if not module.ctx :
+			module.init()
+		return module.ctx
 	def allowMultiSelection(self):
 		return True
 	def setMultiSel(self,selections):
