@@ -71,6 +71,14 @@ def initCmds():
 			'nameToParam' : 'abbr'
 		},
 	})
+	html = command.cmds.addCmd(command.Command('css'))
+	html.addCmds({
+		'fallback':{
+			'aliasOf' : 'core:emmet',
+			'defaults' : {'lang':'css'},
+			'nameToParam' : 'abbr'
+		},
+	})
 	
 command.cmdInitialisers.add(initCmds)
 
@@ -250,7 +258,7 @@ class EmmetCmd(command.BaseCommand):
 		emmet_ctx = self.instance.codewave.editor.getEmmetContextObject()
 		if emmet_ctx is not None :
 			with emmet_ctx.js() as c:
-				res = c.locals.emmet.expandAbbreviation(self.abbr)
+				res = c.locals.emmet.expandAbbreviation(self.abbr, self.lang)
 				if res is not None :
 					if '${0}' in res :
 						res = res.replace('${0}','|')
