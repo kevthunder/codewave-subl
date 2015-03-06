@@ -36,6 +36,9 @@ def initCmds():
 		'exec_parent':{
 			'execute' : exec_parent
 		},
+		'content':{
+			'result' : getContent
+		},
 		'box':{
 			'cls' : BoxCmd
 		},
@@ -71,13 +74,30 @@ def initCmds():
 			'nameToParam' : 'abbr'
 		},
 	})
-	html = command.cmds.addCmd(command.Command('css'))
-	html.addCmds({
+	css = command.cmds.addCmd(command.Command('css'))
+	css.addCmds({
 		'fallback':{
 			'aliasOf' : 'core:emmet',
 			'defaults' : {'lang':'css'},
 			'nameToParam' : 'abbr'
 		},
+	})
+  
+	php = command.cmds.addCmd( command.Command('php'))
+	php.addDetector( Codewave.PairDetector({result:'php:inner',opener:'<?php',closer:'?>','else':'php:outer'}))
+
+	phpOuter = php.addCmd( command.Command('outer'))
+	phpOuter.addCmds({
+		'fallback':{
+			'aliasOf' : 'php:inner:%name%',
+			'beforeExecute' : closePhpForContent
+			'alterResult' : wrapWithPhp
+		},
+	})
+  
+	phpInner = php.addCmd( command.Command('inner'))
+	phpInner.addCmds({
+		'if':'if(|){\n\t~~content~~\n}'
 	})
 	
 command.cmdInitialisers.add(initCmds)
@@ -109,15 +129,22 @@ def exec_parent(instance):
 		instance.replaceStart = instance.parent.replaceStart
 		instance.replaceEnd = instance.parent.replaceEnd
 		return res
-		
-
+def getContent(instance):
+	if instance.codewave.context is not None:
+		return instance.codewave.context.content
+def wrapWithPhp(result):
+	regOpen = re.compile(r"<\?php\s([\n\r\s]+)")
+	regClose = re.compile(r"([\n\r\s]+)\s\?>")
+	return '<?php ' + re.sub(regOpen, '$1<?php ', re.sub(regClose, ' ?>$1', result)) + ' ?>'
+def closePhpForContent(instance):
+	instance.content = ' ?>'+instance.content+'<?php '
 class BoxCmd(command.BaseCommand):
 	def __init__(self,instance):
 		self.instance = instance
 		
 		if self.instance.content:
 			bounds = self.textBounds(self.instance.content)
-			self.width,self.height = bounds.width, bounds.height
+			self.width, self.height = bounds.width, bounds.height
 		else:
 			self.width = 50
 			self.height = 3
@@ -162,14 +189,14 @@ class BoxCmd(command.BaseCommand):
 		return util.repeatToLength(" ", self.pad)
 	def lines(self,text = ''):
 		text = text or ''
-		lines = text.replace('\r','').split("\n")
+		lines = text.replace('\r', '').split("\n")
 		return "\n".join([self.line(lines[x] if x < len(lines) else '') for x in range(0,self.height)]) 
 	def line(self,text = ''):
 		return self.wrapComment(
 				self.deco + 
 				self.padding() + 
 				text + 
-				util.repeatToLength(" ", self.width-len(self.instance.codewave.removeCarret(text))) + 
+				util.repeatToLength(" ", self.width - len(self.instance.codewave.removeCarret(text))) + 
 				self.padding() + 
 				self.deco
 			)
@@ -190,7 +217,7 @@ class CloseCmd(command.BaseCommand):
 		endFind = self.endFind()
 		start = self.instance.codewave.findPrev(self.instance.pos, startFind)
 		end = self.instance.codewave.findNext(self.instance.getEndPos(), endFind) 
-		if start is not None and end is not None :
+		if start is not None and end is not None:
 			self.instance.codewave.editor.spliceText(start,end + len(endFind),'')
 			self.instance.codewave.editor.setCursorPos(start)
 		else:
@@ -239,13 +266,17 @@ class NameSpaceCmd(command.BaseCommand):
 	def __init__(self,instance):
 		self.instance = instance
 	def result(self):
-		namespaces = self.instance.finder.namespaces
-		txt = '~~box~~\n'
-		for nspc in namespaces :
-			txt += nspc+'\n'
-		txt += '~~!close|~~\n~~/box~~'
-		parser = self.instance.getParserForText(txt)
-		return parser.parseAll()
+		if self.name is not None:
+			self.instance.codewave.getRoot().addNameSpace(self.name)
+			return ''
+		else:
+			namespaces = self.instance.finder.namespaces
+			txt = '~~box~~\n'
+			for nspc in namespaces :
+				txt += nspc+'\n'
+			txt += '~~!close|~~\n~~/box~~'
+			parser = self.instance.getParserForText(txt)
+			return parser.parseAll()
 
 
 
@@ -258,7 +289,8 @@ class EmmetCmd(command.BaseCommand):
 		emmet_ctx = self.instance.codewave.editor.getEmmetContextObject()
 		if emmet_ctx is not None :
 			with emmet_ctx.js() as c:
-				res = c.locals.emmet.expandAbbreviation(self.abbr, self.lang)
+                emmet = c.locals.emmet
+				res = emmet.expandAbbreviation(self.abbr, self.lang)
 				if res is not None :
 					if '${0}' in res :
 						res = res.replace('${0}','|')

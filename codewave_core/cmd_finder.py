@@ -1,7 +1,7 @@
 import codewave_core.command as command
 import codewave_core.core_cmds as core_cmds
 import codewave_core.logger as logger
-
+import codewave_core.util as util
 
 class CmdFinder():
 	def __init__(self,names,namespaces = None, parent=None, **keywords):
@@ -38,21 +38,21 @@ class CmdFinder():
 	def getNamesWithPaths(self):
 		paths = {}
 		for name in self.names :
-			parts = name.split(':',1)
-			if len(parts) > 1 and parts[0] not in self.namespaces:
-				if parts[0] not in paths :
-					paths[parts[0]] = []
-				paths[parts[0]].append(parts[1])
+			space,rest = util.splitFirstNamespace(name)
+			if space is not None and space not in self.namespaces:
+				if space not in paths :
+					paths[space] = []
+				paths[space].append(rest)
 		return paths
-	def applySpaceOnNames(self,space):
-		parts = space.split(':',1)
-		return list(map(lambda n: self._applySpaceOnName(n,parts) , self.names))
-	def _applySpaceOnName(self,name,spaceParts):
-		parts = name.split(':',1)
-		if len(parts) > 1 and parts[0] == spaceParts[0] :
-			name = parts[1]
-		if len(spaceParts) > 1 :
-			name = spaceParts[1] + ':' + name
+	def applySpaceOnNames(self,namespace):
+		space,rest = util.splitFirstNamespace(namespace,True)
+		return list(map(lambda n: self._applySpaceOnName(n,space,rest) , self.names))
+	def _applySpaceOnName(self,name,space,rest):
+		cur_space,cur_rest = util.splitFirstNamespace(name)
+		if cur_space is not None and cur_space == space:
+			name = cur_rest
+		if rest is not None :
+			name = rest + ':' + name
 		return name
 	def getDirectNames(self):
 		return [n for n in self.names if ':' not in n]
@@ -60,10 +60,15 @@ class CmdFinder():
 		if self.useDetectors :
 			self.useDetectors = False
 			posibilities = CmdFinder(self.namespaces,parent=self,mustExecute=False,useFallbacks=False).findPosibilities()
-			for cmd in posibilities :
+			i = 0
+			while i < len(posibilities):
+				cmd = posibilities[i]
 				for detector in cmd.detectors :
 					res = detector.detect(self)
-					self.addNamespaces(res)
+					if res is not None:
+						self.addNamespaces(res)
+						posibilities += CmdFinder(res,{parent: self,mustExecute: False,useFallbacks: False}).findPosibilities()
+				i+=1
 	def addNamespaces(self,spaces):
 		if spaces :
 			if not isinstance(spaces, list) :
@@ -87,19 +92,18 @@ class CmdFinder():
 			if next is not None :
 				posibilities += CmdFinder(names,parent=self,root=next).findPosibilities()
 		for nspc in self.namespaces:
-			nspcPath = nspc.split(":");
-			nspcName = nspcPath.pop(0)
+            nspcName,rest = util.splitFirstNamespace(nspc,True)
 			next = self.root.getCmd(nspcName)
 			if next is not None :
 				posibilities += CmdFinder(self.applySpaceOnNames(nspc),parent=self,root=next).findPosibilities()
 		for name in self.getDirectNames():
 			direct = self.root.getCmd(name)
 			if self.cmdIsValid(direct):
-				posibilities += [direct]
+        posibilities.append(direct)
 		if self.useFallbacks:
 			fallback = self.root.getCmd('fallback')
 			if self.cmdIsValid(fallback):
-				posibilities += [fallback]
+        posibilities.append(fallback)
 		return posibilities
 	def cmdIsValid(self,cmd):
 		if cmd is None:
