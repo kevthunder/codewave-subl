@@ -23,11 +23,14 @@ class CodewaveCommand(sublime_plugin.TextCommand):
 			# reload
 			try :
 				for m in sys.modules.values() :
-					if hasattr(m,'__file__') and "codewave" in m.__file__.lower() :
-						print("reload :" + m.__name__)
-						imp.reload(m)
+					try :
+						if hasattr(m,'__file__') and "codewave" in m.__file__.lower() :
+							print("reload :" + m.__name__)
+							imp.reload(m)
+					except Exception as e:
+						print("reload failed :" + str(e))
 			except Exception as e:
-				print("reload failed :" + str(e))
+				print("reloads failed :" + str(e))
 			
 		if debug or 'codewaves' not in vars() or codewaves is None :
 			print('init codewave')
@@ -36,7 +39,7 @@ class CodewaveCommand(sublime_plugin.TextCommand):
 			codewave_core.codewave.init()
 			codewaves = {}
 			
-		key = getBufferKey(self.view)
+		key = getBufferKey(self.view) 
 		if key in codewaves :
 			cw = codewaves[key]
 		else :
@@ -45,14 +48,15 @@ class CodewaveCommand(sublime_plugin.TextCommand):
 		cw.editor.edit = edit
 		cw.onActivationKey()
 		
-	def printFunct(self,txt):
+	def printFunct(self,txt): 
 		print(txt)
 
-class GoogleAutocomplete(sublime_plugin.EventListener):
+class CodewaveListener(sublime_plugin.EventListener):
 	def on_modified(self,view):
 		global codewaves
-		key = getBufferKey(view)
-		if key in codewaves :
-			cw = codewaves[key]
-			for callback in cw.editor.changeListeners :
-				callback()
+		if 'codewaves' in vars():
+			key = getBufferKey(view)
+			if key in codewaves :
+				cw = codewaves[key]
+				for callback in cw.editor.changeListeners :
+					callback()
