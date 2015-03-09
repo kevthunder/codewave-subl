@@ -16,8 +16,8 @@ class ClosingPromp():
 		self.found = True
 		p1 = self.start+len(self.codewave.brakets)
 		p2 = self.end+len(self.codewave.brakets)*3+len(self.codewave.closeChar)+2
-		self.openBounds = util.wrappedPos(  self.start, p1, p1, p1+len(self.codewave.brakets))
-		self.closeBounds = util.wrappedPos( self.end, p2, p2, p2+len(self.codewave.brakets))
+		self.openBounds = util.WrappedPos(  self.start, p1, p1, p1+len(self.codewave.brakets))
+		self.closeBounds = util.WrappedPos( self.end, p2, p2, p2+len(self.codewave.brakets))
 		if self.codewave.editor.allowMultiSelection() :
 			self.codewave.editor.setMultiSel([util.Pos(p2,p2),util.Pos(p1,p1)])
 			if self.codewave.editor.canListenToChange() :
@@ -76,11 +76,11 @@ class ClosingPromp():
 		if self.codewave.findPrevBraket(pos) == self.start and self.codewave.editor.textSubstr(self.start,innerStart) == self.codewave.brakets :
 			innerEnd = self.codewave.findNextBraket(innerStart)
 			if innerEnd is not None :
-				return util.wrappedPos( self.start, innerStart, innerEnd, innerEnd+len(self.codewave.brakets))
+				return util.WrappedPos( self.start, innerStart, innerEnd, innerEnd+len(self.codewave.brakets))
 	def whithinCloseBounds(self,openBounds):
 		start = openBounds.end+self.len+2
 		innerStart = start+len(self.codewave.brakets)+len(self.codewave.closeChar)
 		if self.codewave.editor.textSubstr(start,innerStart) == self.codewave.brakets+self.codewave.closeChar :
 			innerEnd = self.codewave.findNextBraket(innerStart)
 			if innerEnd is not None :
-				return util.wrappedPos( start, innerStart, innerEnd, innerEnd+len(self.codewave.brakets))
+				return util.WrappedPos( start, innerStart, innerEnd, innerEnd+len(self.codewave.brakets))
