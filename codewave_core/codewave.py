@@ -32,7 +32,7 @@ class Codewave():
 				setattr(self,key,getattr(parent,key))
 			else:
 				setattr(self,key,val)
-		if self.editor is not None
+		if self.editor is not None :
 			self.editor.bindedTo(self) 
 	def onActivationKey(self):
 		logger.log('activation key')

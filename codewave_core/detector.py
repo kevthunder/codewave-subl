@@ -4,13 +4,13 @@ class Detector():
 		self.data = data
 	def detect(self,finder):
 		if self.detected(finder):
-			if self.data.result is not None
-				return self.data.result 
+			if self.data['result'] is not None:
+				return self.data['result']
 		else:
-			if self.data.else is not None
-				return self.data.else 
-  def detected(self,finder):
-    pass
+			if self.data['else'] is not None:
+				return self.data['else'] 
+	def detected(self,finder):
+		pass
 
 
 class LangDetector(Detector):

@@ -82,19 +82,24 @@ def initCmds():
 			'nameToParam' : 'abbr'
 		},
 	})
-  
+	
 	php = command.cmds.addCmd( command.Command('php'))
-	php.addDetector( Codewave.PairDetector({result:'php:inner',opener:'<?php',closer:'?>','else':'php:outer'}))
+	php.addDetector( detector.PairDetector({
+		'result':'php:inner',
+		'opener':'<?php',
+		'closer':'?>',
+		'else':'php:outer'
+	}))
 
 	phpOuter = php.addCmd( command.Command('outer'))
 	phpOuter.addCmds({
 		'fallback':{
 			'aliasOf' : 'php:inner:%name%',
-			'beforeExecute' : closePhpForContent
+			'beforeExecute' : closePhpForContent,
 			'alterResult' : wrapWithPhp
 		},
 	})
-  
+	
 	phpInner = php.addCmd( command.Command('inner'))
 	phpInner.addCmds({
 		'if':'if(|){\n\t~~content~~\n}'
@@ -289,7 +294,7 @@ class EmmetCmd(command.BaseCommand):
 		emmet_ctx = self.instance.codewave.editor.getEmmetContextObject()
 		if emmet_ctx is not None :
 			with emmet_ctx.js() as c:
-                emmet = c.locals.emmet
+				emmet = c.locals.emmet
 				res = emmet.expandAbbreviation(self.abbr, self.lang)
 				if res is not None :
 					if '${0}' in res :

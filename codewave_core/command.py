@@ -1,5 +1,6 @@
 import codewave_core.storage as storage
 import codewave_core.logger as logger
+import codewave_core.util as util
 import codewave_core.codewave
 
 def _optKey(key,dict,defVal = None): 
@@ -65,7 +66,7 @@ class Command():
 			return instance.cmdObj.resultIsAvailable()
 		aliased = self.getAliased(instance)
 		if aliased is not None:
-		  return aliased.resultIsAvailable(instance)
+			return aliased.resultIsAvailable(instance)
 		for p in ['resultStr','resultFunct']:
 			if getattr(self, p) is not None:
 				return True
@@ -112,7 +113,7 @@ class Command():
 				codewave = instance.codewave
 			else:
 				codewave = codewave_core.codewave.Codewave()
-            aliasOf = self.aliasOf
+			aliasOf = self.aliasOf
 			if instance is not None:
 				aliasOf = aliasOf.replace('%name%',instance.cmdName)
 				self.finder = instance._getFinder(aliasOf)
@@ -174,7 +175,7 @@ class Command():
 			self.addCmd(self, Command('help',data['help'],self))
 		if 'fallback' in data:
 			self.addCmd(self, Command('fallback',data['fallback'],self))
-      
+			
 		if 'cmds' in data:
 			self.addCmds(data['cmds'])
 		return True
@@ -218,12 +219,11 @@ class InitialiserSet(set):
 		existing = self.exists(initialiser)
 		if existing :
 			self.remove(existing)
-		super(InitialiserSet, self).add(initialiser)
+		super(self.__class__, self).add(initialiser)
 	def exists(self,initialiser):
-		print(initialiser.__module__ + initialiser.__name__)
 		for init in self:
 			if init.__module__ == initialiser.__module__ and init.__name__ == initialiser.__name__ :
-				return True
+				return init
 		return False
 	
 if 'cmdInitialisers' not in vars() :

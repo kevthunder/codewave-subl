@@ -40,8 +40,8 @@ class Pair():
 			return self.closer
 	def matchAnyParts(self):
 		return {
-			'opener'= self.openerReg(),
-			'closer'= self.closerReg()
+			'opener' : self.openerReg(),
+			'closer' : self.closerReg()
 		}
 	def matchAnyPartKeys(self):
 		keys = []
@@ -52,7 +52,7 @@ class Pair():
 		groups = []
 		for key, reg in self.matchAnyParts().items():
 			groups.append('('+reg.source+')')
-		return re.compile('|'groups.join())
+		return re.compile('|'.join(groups))
 	def matchAny(self,text):
 		return re.match(self.matchAnyReg(),text)
 	def matchAnyNamed(self,text):
@@ -65,7 +65,10 @@ class Pair():
 			return None
 	def matchAnyLast(self,text):
 		ctext = text
-		while match = self.matchAny(ctext):
+		while True:
+			match = self.matchAny(ctext)
+			if match is None:
+				break
 			ctext = ctext.substr(match.index+1)
 			res = match
 		return res
@@ -79,7 +82,7 @@ def splitFirstNamespace(fullname,isSpace = False) :
 	if not ":" in fullname and not isSpace:
 		return [None,fullname]
 	parts = fullname.split(':')
-	return [parts.pop(0), ':'.join(parts) || None]
+	return [parts.pop(0), ':'.join(parts) or None]
 
 def splitNamespace(fullname) :
 	if ":" in fullname:
@@ -105,10 +108,10 @@ def getTxtSize(txt):
 		
 
 def union(a1,a2):
-    return list(set(['core']).union(self.nameSpaces))
+	return list(set(a1).union(a2))
 
 def merge(d1, *args):
-    res = d1.copy()
+	res = d1.copy()
 	for d2 in args:
-        res.update(d2)
-    return res
+		res.update(d2)
+	return res

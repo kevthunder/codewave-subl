@@ -67,7 +67,7 @@ class CmdFinder():
 					res = detector.detect(self)
 					if res is not None:
 						self.addNamespaces(res)
-						posibilities += CmdFinder(res,{parent: self,mustExecute: False,useFallbacks: False}).findPosibilities()
+						posibilities += CmdFinder(res, parent = self, mustExecute = False, useFallbacks = False).findPosibilities()
 				i+=1
 	def addNamespaces(self,spaces):
 		if spaces :
@@ -92,18 +92,18 @@ class CmdFinder():
 			if next is not None :
 				posibilities += CmdFinder(names,parent=self,root=next).findPosibilities()
 		for nspc in self.namespaces:
-            nspcName,rest = util.splitFirstNamespace(nspc,True)
+			nspcName,rest = util.splitFirstNamespace(nspc,True)
 			next = self.root.getCmd(nspcName)
 			if next is not None :
 				posibilities += CmdFinder(self.applySpaceOnNames(nspc),parent=self,root=next).findPosibilities()
 		for name in self.getDirectNames():
 			direct = self.root.getCmd(name)
 			if self.cmdIsValid(direct):
-        posibilities.append(direct)
+				posibilities.append(direct)
 		if self.useFallbacks:
 			fallback = self.root.getCmd('fallback')
 			if self.cmdIsValid(fallback):
-        posibilities.append(fallback)
+				posibilities.append(fallback)
 		return posibilities
 	def cmdIsValid(self,cmd):
 		if cmd is None:
@@ -117,7 +117,7 @@ class CmdFinder():
 			for p in poss:
 				score = p.depth
 				if p.name == 'fallback' :
-					  score -= 1000
+						score -= 1000
 				if best is None or score >= bestScore:
 					bestScore = score
 					best = p

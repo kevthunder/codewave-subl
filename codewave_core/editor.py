@@ -2,6 +2,9 @@ class Editor():
 	def __init__(self):
 		self.namespace = None
 		
+	def bindedTo(self,codewave):
+		pass
+
 	@property
 	def text(self):
 		raise NotImplementedError

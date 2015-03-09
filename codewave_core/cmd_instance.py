@@ -162,7 +162,7 @@ class CmdInstance():
 			else:
 				self.replaceWith('')
 		elif self.cmd is not None:
-            beforeFunct = self.cmd.getOption('beforeExecute',self)
+			beforeFunct = self.cmd.getOption('beforeExecute',self)
 			if beforeFunct is not None:
 				beforeFunct(self)
 			if self.cmd.resultIsAvailable(self):
@@ -171,7 +171,7 @@ class CmdInstance():
 					if self.cmd.getOption('parse',self) :
 						parser = self.getParserForText(res)
 						res = parser.parseAll()
-                    alterFunct = self.cmd.getOption('alterResult',self)
+					alterFunct = self.cmd.getOption('alterResult',self)
 					if alterFunct is not None:
 						res = alterFunct(res,self)
 					self.replaceWith(res)
