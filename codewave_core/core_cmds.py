@@ -270,6 +270,7 @@ class EditCmd(command.BaseCommand):
 class NameSpaceCmd(command.BaseCommand):
 	def __init__(self,instance):
 		self.instance = instance
+		self.name = self.instance.getParam([0])
 	def result(self):
 		if self.name is not None:
 			self.instance.codewave.getRoot().addNameSpace(self.name)
