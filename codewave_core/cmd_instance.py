@@ -4,13 +4,16 @@ import codewave_core.util as util
 import codewave_core.logger as logger
 import codewave_core.command as command
 import codewave_core.text_parser as text_parser
+import codewave_core.box_helper as box_helper
 
 class CmdInstance():
 	def __init__(self,codewave,pos,str):
 		self.codewave,self.pos,self.str = codewave,pos,str
 		self.content = self.cmdObj = self.closingPos = None
 		self.replaceStart = self.replaceEnd = None
-		self.cmd = self.aliasedCmd = self.cmdOptions = None
+		self.inBox = self.indentLen = self.cmd = self.aliasedCmd = self.cmdOptions = None
+		self._prevEOL = self._nextEOL = self._rawWithFullLines = self._sameLinesPrefix = self._sameLinesSuffix = None
+		self.inited = False
 		if not self.isEmpty():
 			self._checkCloser()
 			self.opening = self.str
@@ -19,12 +22,15 @@ class CmdInstance():
 			self._findClosing()
 			self._checkElongated()
 			self._checkBox()
+			self.content = self.removeIndentFromContent(self.content)
 	def init(self):
-		if not self.isEmpty():
-			self._getParentCmds()
-			self._getCmd()
-			self._parseParams(self.rawParams)
+		if not self.isEmpty() and not self.inited:
+			self.inited = True
+			self.getCmd()
 			self._getCmdObj()
+			self._parseParams(self.rawParams)
+			if self.cmdObj is not None:
+				self.cmdObj.init()
 		return self
 	def _checkCloser(self):
 		noBracket = self._removeBracket(self.str)
@@ -49,12 +55,13 @@ class CmdInstance():
 	def _parseParams(self,params):
 		self.params = []
 		self.named = {}
-		if self.cmd is not None : 
+		if self.cmd is not None: 
 			self.named.update(self.cmd.getDefaults(self))
 			nameToParam = self.cmd.getOption('nameToParam',self)
 			if nameToParam is not None :
 				self.named[nameToParam] = self.cmdName
 		if len(params):
+			allowedNamed = self.cmd.getOption('allowedNamed',self)
 			inStr = False
 			param = ''
 			name = False
@@ -69,7 +76,7 @@ class CmdInstance():
 					name = False
 				elif chr == '"' and (i == 0 or params[i-1] != '\\'):
 					inStr = not inStr
-				elif chr == ':' and not name and not inStr:
+				elif chr == ':' and not name and not inStr and (allowedNamed is None or name in allowedNamed):
 					name = param
 					param = ''
 				else:
@@ -98,7 +105,7 @@ class CmdInstance():
 		max = self.codewave.editor.textLen()
 		while endPos < max and self.codewave.editor.textSubstr(endPos,endPos+len(self.codewave.deco)) == self.codewave.deco:
 			endPos+=len(self.codewave.deco)
-		if endPos >= max or self.codewave.editor.textSubstr(endPos,endPos+1) in [' ',"\n","\r"]:
+		if endPos >= max or self.codewave.editor.textSubstr(endPos, endPos + len(self.codewave.deco)) in [' ',"\n","\r"]:
 			self.str = self.codewave.editor.textSubstr(self.pos,endPos)
 	def _checkBox(self):
 		cl = self.codewave.wrapCommentLeft()
@@ -108,24 +115,49 @@ class CmdInstance():
 			self.pos = self.pos - len(cl)
 			self.str = self.codewave.editor.textSubstr(self.pos,endPos)
 			self._removeCommentFromContent()
+		elif cl in self.sameLinesPrefix() and cr in self.sameLinesSuffix():
+			self.inBox = 1
+			self._removeCommentFromContent()
 	def _removeCommentFromContent(self):
 		if self.content:
 			ecl = util.escapeRegExp(self.codewave.wrapCommentLeft())
 			ecr = util.escapeRegExp(self.codewave.wrapCommentRight())
 			ed = util.escapeRegExp(self.codewave.deco)
 			re1 = re.compile("^\\s*"+ecl+"(?:"+ed+")+\\s*(.*?)\\s*(?:"+ed+")+"+ecr+"$", re.M)
-			re2 = re.compile("^(?:"+ed+")*"+ecr+"\n")
-			re3 = re.compile("\n\\s*"+ecl+"(?:"+ed+")*$")
+			re2 = re.compile("^\\s*(?:"+ed+")*"+ecr+"\r?\n")
+			re3 = re.compile("\n\\s*"+ecl+"(?:"+ed+")*\\s*$")
 			self.content = re.sub(re3,'',re.sub(re2,'',re.sub(re1,r'\1',self.content)))
 	def _getParentCmds(self):
 		p = self.codewave.getEnclosingCmd(self.getEndPos())
 		self.parent = p.init() if p is not None else None
-	def _getCmd(self):
-		if self.noBracket[0:len(self.codewave.noExecuteChar)] == self.codewave.noExecuteChar:
-			self.cmd = command.cmds.getCmd('core:no_execute')
-		else:
-			self.finder = self._getFinder(self.cmdName)
-			self.cmd = self.finder.find()
+	def prevEOL(self):
+		if not self._prevEOL is not None:
+			self._prevEOL = self.codewave.findLineStart(self.pos)
+		return self._prevEOL
+	def nextEOL(self):
+		if not self._nextEOL is not None:
+			self._nextEOL = self.codewave.findLineEnd(self.getEndPos())
+		return self._nextEOL
+	def rawWithFullLines(self):
+		if not self._rawWithFullLines is not None:
+			self._rawWithFullLines = self.codewave.editor.textSubstr(self.prevEOL(),self.nextEOL())
+		return self._rawWithFullLines
+	def sameLinesPrefix(self):
+		if not self._sameLinesPrefix is not None:
+			self._sameLinesPrefix = self.codewave.editor.textSubstr(self.prevEOL(),self.pos)
+		return self._sameLinesPrefix
+	def sameLinesSuffix(self):
+		if not self._sameLinesSuffix is not None:
+			self._sameLinesSuffix = self.codewave.editor.textSubstr(self.getEndPos(),self.nextEOL())
+		return self._sameLinesSuffix
+	def getCmd(self):
+		if not self.cmd is not None:
+			self._getParentCmds()
+			if self.noBracket[0:len(self.codewave.noExecuteChar)] == self.codewave.noExecuteChar:
+				self.cmd = command.cmds.getCmd('core:no_execute')
+			else:
+				self.finder = self._getFinder(self.cmdName)
+				self.cmd = self.finder.find()
 		return self.cmd
 	def _getFinder(self,cmdName):
 		finder = self.codewave.getFinder(cmdName,self._getParentNamespaces())
@@ -168,6 +200,7 @@ class CmdInstance():
 			if self.cmd.resultIsAvailable(self):
 				res = self.cmd.result(self)
 				if res is not None:
+					res = self.formatIndent(res)
 					if self.cmd.getOption('parse',self) :
 						parser = self.getParserForText(res)
 						res = parser.parseAll()
@@ -179,8 +212,8 @@ class CmdInstance():
 			else:
 				return self.cmd.execute(self)
 	def result(self): 
-			if self.cmd.resultIsAvailable():
-				self.cmd.result(self)
+		if self.cmd.resultIsAvailable():
+			return self.formatIndent(self.cmd.result(self))
 	def getParserForText(self,txt):
 		parser = codewave_core.codewave.Codewave(text_parser.TextParser(txt))
 		parser.context = self
@@ -191,22 +224,52 @@ class CmdInstance():
 	def getPos(self):
 		return util.Pos(self.pos,self.pos+len(self.str))
 	def getIndent(self):
-		return self.pos - self.codewave.findLineStart(self.pos)
+		if self.indentLen is None:
+			if self.inBox is not None:
+				helper = box_helper.BoxHelper(self.codewave)
+				self.indentLen = len(helper.removeComment(self.sameLinesPrefix()))
+			else:
+				self.indentLen = self.pos - self.codewave.findLineStart(self.pos)
+		return self.indentLen
+	def formatIndent(self,text):
+		if text is not None:
+			return re.sub("\t",'  ',text)
+		else:
+			return text
 	def applyIndent(self,text):
-		reg = re.compile(r'\n',re.M)
-		return re.sub(reg, '\n'+util.repeatToLength(" ",self.getIndent()),text)
+		if text is not None:
+			reg = re.compile(r'\n',re.M)
+			return re.sub(reg, '\n'+util.repeatToLength(" ",self.getIndent()),text)
+		else:
+			return text
+	def removeIndentFromContent(self,text):
+		if text is not None:
+			reg = re.compile('^\\s{'+str(self.getIndent())+'}',re.M)
+			return re.sub(reg,'',text)
+		else:
+			return text
 	def replaceWith(self,text):
-		text = self.applyIndent(text)
+		prefix = suffix = ''
+		start = self.pos
+		end = self.getEndPos()
 		
-		cursorPos = self.pos+len(text)
+		text = self.applyIndent(text)
+		if self.inBox is not None:
+			start = self.prevEOL()
+			end = self.nextEOL()
+			helper =  box_helper.BoxHelper(self.codewave).getOptFromLine(self.rawWithFullLines(),False)
+			res = helper.reformatLines(self.sameLinesPrefix()+self.codewave.marker+text+self.codewave.marker+self.sameLinesSuffix(),{'multiline':False})
+			prefix,text,suffix = res.split(self.codewave.marker)
+		
+		cursorPos = start+len(prefix)+len(text)
 		if self.cmd is not None and self.codewave.checkCarret and self.cmd.getOption('checkCarret',self):
 			p = self.codewave.getCarretPos(text)
 			if p is not None :
-				cursorPos = self.pos+p
+				cursorPos = start+len(prefix)+p
 			text = self.codewave.removeCarret(text)
 			
 			
-		self.codewave.editor.spliceText(self.pos,self.getEndPos(),text)
+		self.codewave.editor.spliceText(start,end,prefix+text+suffix)
 		self.codewave.editor.setCursorPos(cursorPos)
-		self.replaceStart = self.pos
-		self.replaceEnd = self.pos+len(text)
+		self.replaceStart = start
+		self.replaceEnd = start+len(prefix)+len(text)+len(suffix)

@@ -27,6 +27,7 @@ class Command():
 			'parse' : False,
 			'beforeExecute' : None,
 			'alterResult' : None,
+			'preventParseAll' : False,
 		}
 		self.options = {}
 		self.finalOptions = None
@@ -260,6 +261,8 @@ def loadCmds():
 class BaseCommand():
 	def __init__(self,instance):
 		self.instance = instance
+	def init(self):
+		pass
 	def resultIsAvailable(self):
 		return hasattr(self,"result")
 	def getDefaults(self):

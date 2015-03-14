@@ -71,7 +71,7 @@ class CmdFinder():
 				i+=1
 	def addNamespaces(self,spaces):
 		if spaces :
-			if not isinstance(spaces, list) :
+			if isinstance(spaces, str):
 				spaces = [spaces]
 			for space in spaces :
 				if space not in self.namespaces :

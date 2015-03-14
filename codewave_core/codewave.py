@@ -13,6 +13,7 @@ class Codewave():
 	def __init__(self,editor,parent = None, **keywords):
 		self.editor,self.parent = editor,parent
 		self.closingPromp = self.context = None
+		self.marker = '[[[[codewave_marquer]]]]'
 		self.nameSpaces = []
 		self.vars = {}
 		
@@ -110,6 +111,10 @@ class Codewave():
 	def findLineStart(self,pos):
 		p = self.findAnyNext(pos ,["\n"], -1)
 		return p.pos+1 if p is not None else 0
+
+	def findLineEnd(self,pos): 
+		p = self.findAnyNext(pos ,["\n","\r"])
+		return p.pos if p is not None else self.editor.textLen()
 	def findPrevBraket(self,start):
 		return self.findNextBraket(start,-1)
 	def findNextBraket(self,start,direction = 1):
@@ -134,8 +139,8 @@ class Codewave():
 					start, end = end, start
 				if stri == self.editor.textSubstr(start,end):
 					return util.StrPos(
-					   pos-len(stri) if direction < 0 else pos,
-					   stri
+						 pos-len(stri) if direction < 0 else pos,
+						 stri
 					)
 			pos += direction
 	def findMatchingPair(self,startPos,opening,closing,direction = 1):
@@ -173,7 +178,7 @@ class Codewave():
 				break
 			pos = cmd.getEndPos()
 			self.editor.setCursorPos(pos)
-			if recursive and cmd.content is not None :
+			if recursive and cmd.content is not None and (cmd.getCmd() is None or not cmd.cmd.getOption('preventParseAll')):
 				parser = Codewave(text_parser.TextParser(cmd.content),parent=self)
 				cmd.content = parser.parseAll()
 			if cmd.init().execute() is not None:
@@ -203,7 +208,7 @@ class Codewave():
 		return found
 	def getFinder(self,cmdName,nameSpaces = []):
 		return cmd_finder.CmdFinder(cmdName,
-            namespaces = util.union(self.getNameSpaces(), nameSpaces),
+						namespaces = util.union(self.getNameSpaces(), nameSpaces),
 			useDetectors = self.isRoot(),
 			codewave = self
 		)
@@ -246,6 +251,11 @@ class Codewave():
 		txt = txt.replace(self.carretChar+self.carretChar, ' ')
 		if self.carretChar in txt :
 			return txt.index(self.carretChar)
+	
+	def regMarker(self,flags=0):
+		return re.compile(util.escapeRegExp(self.marker), flags)
+	def removeMarkers(self,text):
+		return text.replace(self.marker,'')
 
 def init():
 	command.initCmds()

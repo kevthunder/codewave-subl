@@ -92,9 +92,11 @@ def splitNamespace(fullname) :
 	return [':'.join(parts),name]
 
 def trimEmptyLine(txt) :
-	return re.sub(r'^\r?\n', '', re.sub(r'\r?\n$', '', txt))
+	return re.sub(r'^\s*\r?\n', '', re.sub(r'\r?\n\s*$', '', txt))
+
 def escapeRegExp(txt) :
 	return re.escape(txt)
+
 def repeatToLength(txt, length):
 	return (txt * (int(length/len(txt))+1))[:length]
 	
