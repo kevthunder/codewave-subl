@@ -25,6 +25,17 @@ class Size():
 	def __init__(self,width,height):
 		self.width,self.height = width,height
 
+class Replacement():
+	def __init__(self, start, end, text, prefix ='', suffix = ''):
+		self.start, self.end, self.text, self.prefix, self.suffix = start, end, text, prefix, suffix
+	def resPosBeforePrefix(self):
+		return self.start+len(self.prefix)+len(self.text)
+	def resEnd(self): 
+		return self.start+len(self.prefix)+len(self.text)+len(self.suffix)
+	def applyToEditor(self,editor):
+		editor.spliceText(self.start,self.end,self.prefix+self.text+self.suffix)
+		
+
 class Pair():
 	def __init__(self, opener, closer, options):
 		self.opener, self.closer, self.options = opener, closer, options

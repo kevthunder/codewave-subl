@@ -248,28 +248,40 @@ class CmdInstance():
 			return re.sub(reg,'',text)
 		else:
 			return text
-	def replaceWith(self,text):
-		prefix = suffix = ''
-		start = self.pos
-		end = self.getEndPos()
-		
-		text = self.applyIndent(text)
-		if self.inBox is not None:
-			start = self.prevEOL()
-			end = self.nextEOL()
-			helper =  box_helper.BoxHelper(self.codewave).getOptFromLine(self.rawWithFullLines(),False)
-			res = helper.reformatLines(self.sameLinesPrefix()+self.codewave.marker+text+self.codewave.marker+self.sameLinesSuffix(),{'multiline':False})
-			prefix,text,suffix = res.split(self.codewave.marker)
-		
-		cursorPos = start+len(prefix)+len(text)
+	def alterResultForBox(self,repl):
+		helper =  box_helper.BoxHelper(self.codewave)
+		helper.getOptFromLine(self.rawWithFullLines(),False)
+		if self.cmd.getOption('replaceBox',self):
+			box = helper.getBoxForPos(self.getPos())
+			repl.start, repl.end = box.start, box.end
+			self.indentLen = helper.indent
+			repl.text = self.applyIndent(repl.text)
+		else:
+			repl.text = self.applyIndent(repl.text)
+			repl.start = self.prevEOL()
+			repl.end = self.nextEOL()
+			res = helper.reformatLines(self.sameLinesPrefix() + self.codewave.marker + repl.text + self.codewave.marker + self.sameLinesSuffix(), {'multiline':False})
+			repl.prefix,repl.text,repl.suffix = res.split(self.codewave.marker)
+		return repl
+	def getCursorFromResult(self,repl):
+		cursorPos = repl.resPosBeforePrefix()
 		if self.cmd is not None and self.codewave.checkCarret and self.cmd.getOption('checkCarret',self):
-			p = self.codewave.getCarretPos(text)
+			p = self.codewave.getCarretPos(repl.text)
 			if p is not None :
-				cursorPos = start+len(prefix)+p
-			text = self.codewave.removeCarret(text)
+				cursorPos = repl.start+len(repl.prefix)+p
+			repl.text = self.codewave.removeCarret(repl.text)
+		return cursorPos
+	def replaceWith(self,text):
+		repl =  util.Replacement(self.pos,self.getEndPos(),text)
+		
+		if self.inBox is not None:
+			self.alterResultForBox(repl)
+		else:
+			repl.text = self.applyIndent(repl.text)
 			
+		cursorPos = self.getCursorFromResult(repl)
 			
-		self.codewave.editor.spliceText(start,end,prefix+text+suffix)
+		repl.applyToEditor(self.codewave.editor)
 		self.codewave.editor.setCursorPos(cursorPos)
-		self.replaceStart = start
-		self.replaceEnd = start+len(prefix)+len(text)+len(suffix)
+		self.replaceStart = repl.start
+		self.replaceEnd = repl.resEnd()

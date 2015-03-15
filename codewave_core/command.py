@@ -28,6 +28,7 @@ class Command():
 			'beforeExecute' : None,
 			'alterResult' : None,
 			'preventParseAll' : False,
+			'replaceBox' : False,
 		}
 		self.options = {}
 		self.finalOptions = None

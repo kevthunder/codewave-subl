@@ -13,6 +13,7 @@ def initCmds():
 	
 	core.addCmds({
 		'help':{
+			'replaceBox' : True,
 			'result' : textwrap.dedent(
 				"""
 				~~box~~
@@ -56,10 +57,11 @@ def initCmds():
 				"""),
 			'cmds' : {
 				'subjects':{
+					'replaceBox' : True,
 					'result' : textwrap.dedent("""
 						~~box~~
 						~~!help~~
-						~~!help:get_started~~ (~~!help:start~~)
+						~~!help:get_started~~ (~~!help:demo~~)
 						~~!help:subjects~~ (~~!help:sub~~)
 						~~!help:editing~~ (~~!help:edit~~)
 						~~!close|~~
@@ -70,6 +72,7 @@ def initCmds():
 					'aliasOf': 'help:subjects'
 				},
 				'get_started':{
+					'replaceBox' : True,
 					'result' : textwrap.dedent("""
 						~~box~~
 						The classic Hello World.
@@ -143,6 +146,7 @@ def initCmds():
 								""")
 						}
 					},
+					'replaceBox' : True,
 					'result' : textwrap.dedent("""
 						~~box~~
 						~~help:editing:intro~~
