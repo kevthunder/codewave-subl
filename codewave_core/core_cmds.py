@@ -355,12 +355,12 @@ def exec_parent(instance):
 def getContent(instance):
 	if instance.codewave.context is not None:
 		return instance.codewave.context.content or ''
-def wrapWithPhp(result):
+def wrapWithPhp(result,instance):
 	regOpen = re.compile(r"<\?php\s([\n\r\s]+)")
 	regClose = re.compile(r"([\n\r\s]+)\s\?>")
-	return '<?php ' + re.sub(regOpen, '$1<?php ', re.sub(regClose, ' ?>$1', result)) + ' ?>'
+	return '<?php ' + re.sub(regOpen, r'\1<?php ', re.sub(regClose, r' ?>\1', result)) + ' ?>'
 def closePhpForContent(instance):
-	instance.content = ' ?>'+instance.content+'<?php '
+	instance.content = ' ?>'+(instance.content or '')+'<?php '
 class BoxCmd(command.BaseCommand):
 	def init(self):
 		self.helper =  box_helper.BoxHelper(self.instance.codewave)

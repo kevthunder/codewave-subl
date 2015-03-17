@@ -1,4 +1,5 @@
 import re
+import codewave_core.logger as logger
 	
 class StrPos():
 	def __init__(self,pos,str):
@@ -37,16 +38,16 @@ class Replacement():
 		
 
 class Pair():
-	def __init__(self, opener, closer, options):
+	def __init__(self, opener, closer, options = {}):
 		self.opener, self.closer, self.options = opener, closer, options
 	def openerReg(self):
 		if isinstance(self.opener, str) :
-			return re.compile(util.escapeRegExp(self.opener))
+			return re.compile(escapeRegExp(self.opener))
 		else:
 			return self.opener
 	def closerReg(self):
 		if isinstance(self.closer, str) :
-			return re.compile(util.escapeRegExp(self.closer))
+			return re.compile(escapeRegExp(self.closer))
 		else:
 			return self.closer
 	def matchAnyParts(self):
@@ -62,17 +63,18 @@ class Pair():
 	def matchAnyReg(self):
 		groups = []
 		for key, reg in self.matchAnyParts().items():
-			groups.append('('+reg.source+')')
+			groups.append('('+reg.pattern+')')
 		return re.compile('|'.join(groups))
 	def matchAny(self,text):
-		return re.match(self.matchAnyReg(),text)
+		return re.search(self.matchAnyReg(),text)
 	def matchAnyNamed(self,text):
 		return self._matchAnyGetName(self.matchAny(text))
 	def _matchAnyGetName(self,match):
 		if match:
-			for group, i in match.groups():
+			for i, group in enumerate(match.groups()):
+				logger.log(i,group)
 				if group is not None:
-					return self.matchAnyPartKeys()[i-1]
+					return self.matchAnyPartKeys()[i]
 			return None
 	def matchAnyLast(self,text):
 		ctext = text
@@ -80,13 +82,13 @@ class Pair():
 			match = self.matchAny(ctext)
 			if match is None:
 				break
-			ctext = ctext.substr(match.index+1)
+			ctext = ctext[match.start()+1:]
 			res = match
 		return res
 	def matchAnyLastNamed(self,text):
 		return self._matchAnyGetName(self.matchAnyLast(text))
 	def isWapperOf(self,pos,text):
-		return self.matchAnyNamed(text.substr(pos.end)) == 'closer' and self.matchAnyLastNamed(text.substr(0,pos.start)) == 'opener'
+		return self.matchAnyNamed(text[pos.end:]) == 'closer' and self.matchAnyLastNamed(text[0:pos.start]) == 'opener'
 		
 
 def splitFirstNamespace(fullname,isSpace = False) :

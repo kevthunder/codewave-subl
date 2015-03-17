@@ -1,3 +1,5 @@
+import codewave_core.util as util
+import codewave_core.logger as logger
 
 class Detector():
 	def __init__(self,data={}):
