@@ -3,8 +3,8 @@ import codewave_core.editor as editor
 
 class TextParser(editor.Editor):
 	def __init__(self,text):
-		self.namespace = 'text_parser'
 		self._text = text
+		self.namespace = 'text_parser'
 		self.target = None
 	@property
 	def text(self):

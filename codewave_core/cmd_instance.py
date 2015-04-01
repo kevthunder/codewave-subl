@@ -21,12 +21,12 @@ class CmdInstance():
 			self._splitComponents()
 			self._findClosing()
 			self._checkElongated()
-			self._checkBox()
-			self.content = self.removeIndentFromContent(self.content)
 	def init(self):
-		if not self.isEmpty() and not self.inited:
+		if not self.isEmpty() or self.inited:
 			self.inited = True
 			self.getCmd()
+			self._checkBox()
+			self.content = self.removeIndentFromContent(self.content)
 			self._getCmdObj()
 			self._parseParams(self.rawParams)
 			if self.cmdObj is not None:
@@ -61,7 +61,8 @@ class CmdInstance():
 			if nameToParam is not None :
 				self.named[nameToParam] = self.cmdName
 		if len(params):
-			allowedNamed = self.cmd.getOption('allowedNamed',self)
+			if self.cmd is not None:
+				allowedNamed = self.cmd.getOption('allowedNamed',self)
 			inStr = False
 			param = ''
 			name = False
@@ -108,8 +109,8 @@ class CmdInstance():
 		if endPos >= max or self.codewave.editor.textSubstr(endPos, endPos + len(self.codewave.deco)) in [' ',"\n","\r"]:
 			self.str = self.codewave.editor.textSubstr(self.pos,endPos)
 	def _checkBox(self):
-		cl = self.codewave.wrapCommentLeft()
-		cr = self.codewave.wrapCommentRight()
+		cl = self.context.wrapCommentLeft()
+		cr = self.context.wrapCommentRight()
 		endPos = self.getEndPos() + len(cr)
 		if self.codewave.editor.textSubstr(self.pos - len(cl),self.pos) == cl and self.codewave.editor.textSubstr(endPos - len(cr),endPos) == cr:
 			self.pos = self.pos - len(cl)
@@ -120,8 +121,8 @@ class CmdInstance():
 			self._removeCommentFromContent()
 	def _removeCommentFromContent(self):
 		if self.content:
-			ecl = util.escapeRegExp(self.codewave.wrapCommentLeft())
-			ecr = util.escapeRegExp(self.codewave.wrapCommentRight())
+			ecl = util.escapeRegExp(self.context.wrapCommentLeft())
+			ecr = util.escapeRegExp(self.context.wrapCommentRight())
 			ed = util.escapeRegExp(self.codewave.deco)
 			re1 = re.compile("^\\s*"+ecl+"(?:"+ed+")+\\s*(.*?)\\s*(?:"+ed+")+"+ecr+"$", re.M)
 			re2 = re.compile("^\\s*(?:"+ed+")*"+ecr+"\r?\n")
@@ -131,36 +132,40 @@ class CmdInstance():
 		p = self.codewave.getEnclosingCmd(self.getEndPos())
 		self.parent = p.init() if p is not None else None
 	def prevEOL(self):
-		if not self._prevEOL is not None:
+		if self._prevEOL is None:
 			self._prevEOL = self.codewave.findLineStart(self.pos)
 		return self._prevEOL
 	def nextEOL(self):
-		if not self._nextEOL is not None:
+		if self._nextEOL is None:
 			self._nextEOL = self.codewave.findLineEnd(self.getEndPos())
 		return self._nextEOL
 	def rawWithFullLines(self):
-		if not self._rawWithFullLines is not None:
+		if self._rawWithFullLines is None:
 			self._rawWithFullLines = self.codewave.editor.textSubstr(self.prevEOL(),self.nextEOL())
 		return self._rawWithFullLines
 	def sameLinesPrefix(self):
-		if not self._sameLinesPrefix is not None:
+		if self._sameLinesPrefix is None:
 			self._sameLinesPrefix = self.codewave.editor.textSubstr(self.prevEOL(),self.pos)
 		return self._sameLinesPrefix
 	def sameLinesSuffix(self):
-		if not self._sameLinesSuffix is not None:
+		if self._sameLinesSuffix is None:
 			self._sameLinesSuffix = self.codewave.editor.textSubstr(self.getEndPos(),self.nextEOL())
 		return self._sameLinesSuffix
 	def getCmd(self):
-		if not self.cmd is not None:
+		if self.cmd is None:
 			self._getParentCmds()
 			if self.noBracket[0:len(self.codewave.noExecuteChar)] == self.codewave.noExecuteChar:
 				self.cmd = command.cmds.getCmd('core:no_execute')
+				self.context = self.codewave.context
 			else:
 				self.finder = self._getFinder(self.cmdName)
+				self.context = self.finder.context
 				self.cmd = self.finder.find()
+				if self.cmd is not None:
+					self.context.addNameSpace(self.cmd.fullName)
 		return self.cmd
 	def _getFinder(self,cmdName):
-		finder = self.codewave.getFinder(cmdName,self._getParentNamespaces())
+		finder = self.codewave.context.getFinder(cmdName,self._getParentNamespaces())
 		finder.instance = self
 		return finder
 	def _getCmdObj(self):
@@ -189,7 +194,7 @@ class CmdInstance():
 		return defVal
 	def execute(self):
 		if self.isEmpty():
-			if self.codewave.closingPromp is not None and self.codewave.closingPromp.whithinOpenBounds(self.pos+len(self.codewave.brakets)) is not None:
+			if self.codewave.closingPromp is not None and self.codewave.closingPromp.whithinOpenBounds(self.pos + len(self.codewave.brakets)) is not None:
 				self.codewave.closingPromp.cancel()
 			else:
 				self.replaceWith('')
@@ -214,9 +219,8 @@ class CmdInstance():
 	def result(self): 
 		if self.cmd.resultIsAvailable():
 			return self.formatIndent(self.cmd.result(self))
-	def getParserForText(self,txt):
-		parser = codewave_core.codewave.Codewave(text_parser.TextParser(txt))
-		parser.context = self
+	def getParserForText(self,txt=''):
+		parser = codewave_core.codewave.Codewave(text_parser.TextParser(txt), inInstance=self)
 		parser.checkCarret = False
 		return parser
 	def getEndPos(self):
@@ -226,20 +230,20 @@ class CmdInstance():
 	def getIndent(self):
 		if self.indentLen is None:
 			if self.inBox is not None:
-				helper = box_helper.BoxHelper(self.codewave)
+				helper = box_helper.BoxHelper(self.context)
 				self.indentLen = len(helper.removeComment(self.sameLinesPrefix()))
 			else:
 				self.indentLen = self.pos - self.codewave.findLineStart(self.pos)
 		return self.indentLen
 	def formatIndent(self,text):
 		if text is not None:
-			return re.sub("\t",'  ',text)
+			return text.replace("\t",'  ')
 		else:
 			return text
 	def applyIndent(self,text):
 		if text is not None:
 			reg = re.compile(r'\n',re.M)
-			return re.sub(reg, '\n'+util.repeatToLength(" ",self.getIndent()),text)
+			return re.sub(reg, "\n" + util.repeatToLength(" ",self.getIndent()),text)
 		else:
 			return text
 	def removeIndentFromContent(self,text):
@@ -249,7 +253,7 @@ class CmdInstance():
 		else:
 			return text
 	def alterResultForBox(self,repl):
-		helper =  box_helper.BoxHelper(self.codewave)
+		helper = box_helper.BoxHelper(self.context)
 		helper.getOptFromLine(self.rawWithFullLines(),False)
 		if self.cmd.getOption('replaceBox',self):
 			box = helper.getBoxForPos(self.getPos())

@@ -3,10 +3,10 @@ import codewave_core.util as util
 import codewave_core.logger as logger
 
 class BoxHelper():
-	def __init__(self, codewave, options = {}):
-		self.codewave = codewave
+	def __init__(self, context, options = {}):
+		self.context = context
 		defaults = {
-			'deco': codewave.deco,
+			'deco': self.context.codewave.deco,
 			'pad': 2,
 			'width': 50,
 			'height': 3,
@@ -22,7 +22,7 @@ class BoxHelper():
 	def draw(self,text):
 		return self.startSep() + "\n" + self.lines(text) + "\n"+ self.endSep()
 	def wrapComment(self,str):
-		return self.codewave.wrapComment(str)
+		return self.context.wrapComment(str)
 	def separator(self):
 		len = self.width + 2 * self.pad + 2 * len(self.deco)
 		return self.wrapComment(self.decoLine(len))
@@ -54,27 +54,28 @@ class BoxHelper():
 					self.deco
 			))
 	def removeIgnoredContent(self,text):
-		return self.codewave.removeMarkers(self.codewave.removeCarret(text))
+		return self.context.codewave.removeMarkers(self.context.codewave.removeCarret(text))
 	def textBounds(self,text):
 		return util.getTxtSize(self.removeIgnoredContent(text))
 	def getBoxForPos(self,pos):
-		startFind = self.codewave.wrapCommentLeft(self.deco + self.deco)
-		endFind = self.codewave.wrapCommentRight(self.deco + self.deco)
-		start = self.codewave.findPrev(pos.start, startFind)
-		end = self.codewave.findNext(pos.end, endFind)
+		startFind = self.context.wrapCommentLeft(self.deco + self.deco)
+		endFind = self.context.wrapCommentRight(self.deco + self.deco)
+		start = self.context.codewave.findPrev(pos.start, startFind)
+		end = self.context.codewave.findNext(pos.end, endFind)
 		if start is not None and end is not None:
 			 return util.Pos(start,end + len(endFind))
 	def getOptFromLine(self,line,getPad=True):
-		rStart = re.compile("(\\s*)("+self.codewave.wrapCommentLeft(self.deco)+")(\\s*)")
-		rEnd = re.compile("(\\s*)("+self.codewave.wrapCommentRight(self.deco)+")")
+		rStart = re.compile("(\\s*)("+util.escapeRegExp(self.context.wrapCommentLeft(self.deco))+")(\\s*)")
+		rEnd = re.compile("(\\s*)("+util.escapeRegExp(self.context.wrapCommentRight(self.deco))+")")
 		resStart = rStart.search(line)
 		resEnd = rEnd.search(line)
-		if getPad:
-			self.pad = Math.min(len(resStart.group(3)),len(resEnd.group(1)))
-		self.indent = len(resStart.group(1))
-		startPos = resStart.end(2) + self.pad
-		endPos = resEnd.start(2) - self.pad
-		self.width = endPos - startPos
+		if resStart is not None and resEnd is not None:
+			if getPad:
+				self.pad = min(len(resStart.group(3)),len(resEnd.group(1)))
+			self.indent = len(resStart.group(1))
+			startPos = resStart.end(2) + self.pad
+			endPos = resEnd.start(2) - self.pad
+			self.width = endPos - startPos
 		return self
 	def reformatLines(self,text,options={}):
 		return self.lines(self.removeComment(text,options),False)
@@ -84,10 +85,10 @@ class BoxHelper():
 				'multiline': True
 			}
 			opt = util.merge(defaults,options)
-			ecl = util.escapeRegExp(self.codewave.wrapCommentLeft())
-			ecr = util.escapeRegExp(self.codewave.wrapCommentRight())
+			ecl = util.escapeRegExp(self.context.wrapCommentLeft())
+			ecr = util.escapeRegExp(self.context.wrapCommentRight())
 			ed = util.escapeRegExp(self.deco)
 			flag = re.M if opt['multiline'] else 0
-			re1 = re.compile("^\\s*"+ecl+"(?:"+ed+")*\\s{0,"+str(self.pad)+"}",flag)
-			re2 = re.compile("\\s*(?:"+ed+")*"+ecr+"\\s*$",flag)
+			re1 = re.compile("^\\s*"+ecl+"(?:"+ed+")*\\s{0,"+str(self.pad)+"}", flag)
+			re2 = re.compile("\\s*(?:"+ed+")*"+ecr+"\\s*$", flag)
 			return re.sub(re2,'',re.sub(re1,'',text))

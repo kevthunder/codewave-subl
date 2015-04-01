@@ -2,13 +2,18 @@ import codewave_core.command as command
 import codewave_core.core_cmds as core_cmds
 import codewave_core.logger as logger
 import codewave_core.util as util
+import codewave_core.context as context
 
 class CmdFinder():
-	def __init__(self,names,namespaces = None, parent=None, **keywords):
-		if not isinstance(names, list) :
+	def __init__(self,names, **options):
+		
+		if isinstance(names, str):
 			names = [names]
 		defaults = {
+			'parent' : None,
 			'namespaces' : [],
+			'parentContext': None,
+			'context': None,
 			'root' : command.cmds,
 			'mustExecute': True,
 			'useDetectors': True,
@@ -17,16 +22,20 @@ class CmdFinder():
 			'codewave': None
 		}
 		self.names = names
-		self.parent = parent
-		if namespaces is not None :
-			keywords['namespaces'] = namespaces 
+		self.parent = options['parent'] if 'parent' in options else None
 		for key, val in defaults.items():
-			if key in keywords:
-				setattr(self,key,keywords[key])
-			elif parent is not None :
-				setattr(self,key,getattr(parent,key))
+			if key in options:
+				setattr(self,key,options[key])
+			elif self.parent is not None and key != 'parent':
+				setattr(self,key,getattr(self.parent,key))
 			else:
 				setattr(self,key,val)
+		if self.context is None:
+			self.context = context.Context(self.codewave)
+		if self.parentContext is not None:
+			self.context.parent = self.parentContext
+		if self.namespaces is not None:
+			self.context.addNamespaces(self.namespaces)
 	def find(self):
 		self.triggerDetectors()
 		self.cmd = self.findIn(self.root)
@@ -59,23 +68,16 @@ class CmdFinder():
 	def triggerDetectors(self):
 		if self.useDetectors :
 			self.useDetectors = False
-			posibilities = CmdFinder(self.namespaces,parent=self,mustExecute=False,useFallbacks=False).findPosibilities()
+			posibilities = CmdFinder(self.context.getNameSpaces(), parent=self, mustExecute=False, useFallbacks=False).findPosibilities()
 			i = 0
 			while i < len(posibilities):
 				cmd = posibilities[i]
 				for detector in cmd.detectors :
 					res = detector.detect(self)
 					if res is not None:
-						self.addNamespaces(res)
+						self.context.addNamespaces(res)
 						posibilities += CmdFinder(res, parent = self, mustExecute = False, useFallbacks = False).findPosibilities()
 				i+=1
-	def addNamespaces(self,spaces):
-		if spaces :
-			if isinstance(spaces, str):
-				spaces = [spaces]
-			for space in spaces :
-				if space not in self.namespaces :
-					self.namespaces.append(space)
 	def findIn(self,cmd,path = None):
 		if cmd is None:
 			return None
@@ -90,12 +92,12 @@ class CmdFinder():
 		for space, names in self.getNamesWithPaths().items():
 			next = self.root.getCmd(space)
 			if next is not None :
-				posibilities += CmdFinder(names,parent=self,root=next).findPosibilities()
-		for nspc in self.namespaces:
+				posibilities += CmdFinder(names, parent=self, root=next).findPosibilities()
+		for nspc in self.context.getNameSpaces():
 			nspcName,rest = util.splitFirstNamespace(nspc,True)
 			next = self.root.getCmd(nspcName)
 			if next is not None :
-				posibilities += CmdFinder(self.applySpaceOnNames(nspc),parent=self,root=next).findPosibilities()
+				posibilities += CmdFinder(self.applySpaceOnNames(nspc), parent=self, root=next).findPosibilities()
 		for name in self.getDirectNames():
 			direct = self.root.getCmd(name)
 			if self.cmdIsValid(direct):

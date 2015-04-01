@@ -7,14 +7,15 @@ import codewave_core.cmd_finder as cmd_finder
 import codewave_core.text_parser as text_parser
 import codewave_core.closing_promp as closing_promp
 import codewave_core.command as command
+import codewave_core.context as context
+import codewave_core.process as process
 
 
 class Codewave():
-	def __init__(self,editor,parent = None, **keywords):
-		self.editor,self.parent = editor,parent
+	def __init__(self,editor, **options):
+		self.editor = editor
 		self.closingPromp = self.context = None
 		self.marker = '[[[[codewave_marquer]]]]'
-		self.nameSpaces = []
 		self.vars = {}
 		
 		defaults = {
@@ -23,19 +24,26 @@ class Codewave():
 			'closeChar' : '/',
 			'noExecuteChar' : '!',
 			'carretChar' : '|',
-			'checkCarret' : True
+			'checkCarret' : True,
+			'inInstance' : None
 		}
+		self.parent = options['parent'] if 'parent' in options else None
 		
 		for key, val in defaults.items():
-			if key in keywords:
-				setattr(self,key,keywords[key])
-			elif parent is not None :
-				setattr(self,key,getattr(parent,key))
+			if key in options:
+				setattr(self,key,options[key])
+			elif self.parent is not None and key != 'parent':
+				setattr(self,key,getattr(self.parent,key))
 			else:
 				setattr(self,key,val)
 		if self.editor is not None :
 			self.editor.bindedTo(self) 
+
+		self.context = context.Context(self)
+		if self.inInstance is not None:
+			self.context.parent = self.inInstance.context
 	def onActivationKey(self):
+		self.process = process.Process()
 		logger.log('activation key')
 		cmd = self.commandOnCursorPos()
 		if cmd is not None :
@@ -48,6 +56,8 @@ class Codewave():
 				self.addBrakets(cpos['start'],cpos['end'])
 			else:
 				self.promptClosingCmd(cpos['start'],cpos['end'])
+
+		self.process = None
 	def commandOnCursorPos(self):
 		cpos = self.editor.getCursorPos()
 		return self.commandOnPos(cpos['end'])
@@ -132,8 +142,7 @@ class Codewave():
 		while True :
 			if 0 > pos or pos >= self.editor.textLen() :
 				return None
-			for stri in strings :
-			
+			for stri in strings:
 				start, end = pos, pos + len(stri) * direction
 				if end < start :
 					start, end = end, start
@@ -179,7 +188,7 @@ class Codewave():
 			pos = cmd.getEndPos()
 			self.editor.setCursorPos(pos)
 			if recursive and cmd.content is not None and (cmd.getCmd() is None or not cmd.cmd.getOption('preventParseAll')):
-				parser = Codewave(text_parser.TextParser(cmd.content),parent=self)
+				parser = Codewave(text_parser.TextParser(cmd.content), parent=self)
 				cmd.content = parser.parseAll()
 			if cmd.init().execute() is not None:
 				if cmd.replaceEnd is not None:
@@ -189,29 +198,6 @@ class Codewave():
 		return self.getText()
 	def getText(self):
 		return self.editor.text
-	def getNameSpaces(self):
-		npcs = set(['core']).union(self.nameSpaces)
-		if self.parent is not None:
-			npcs = npcs.union(self.parent.getNameSpaces())
-		if self.context is not None:
-			if self.context.finder is not None:
-				npcs = npcs.union(self.context.finder.namespaces)
-			npcs = npcs.union([self.context.cmd.fullName])
-		return list(npcs)
-	def addNameSpace(self,name):
-		self.nameSpaces.append(name)
-	def removeNameSpace(self,name):
-		self.nameSpaces = [ n for n in self.nameSpaces if n != name]
-	def getCmd(self,cmdName,nameSpaces = []):
-		finder = self.getFinder(cmdName,nameSpaces)
-		found = finder.find()
-		return found
-	def getFinder(self,cmdName,nameSpaces = []):
-		return cmd_finder.CmdFinder(cmdName,
-						namespaces = util.union(self.getNameSpaces(), nameSpaces),
-			useDetectors = self.isRoot(),
-			codewave = self
-		)
 	def isRoot(self):
 		return self.parent is None and (self.context is None or self.context.finder is None)
 	def getRoot(self):
@@ -219,30 +205,8 @@ class Codewave():
 			return self
 		elif self.parent is not None:
 			return self.parent.getRoot()
-		elif self.context is not None:
-			return self.context.codewave.getRoot()
-	def getCommentChar(self):
-		return '<!-- %s -->'
-	def wrapComment(self,str):
-		cc = self.getCommentChar()
-		if '%s' in cc:
-			return cc.replace('%s',str)
-		else:
-			return cc + ' ' + str + ' ' + cc
-	def wrapCommentLeft(self,str = ''):
-		cc = self.getCommentChar()
-		i = cc.index('%s') if '%s' in cc else None
-		if i is not None:
-			return cc[0:i] + str
-		else:
-			return cc + ' ' + str
-	def wrapCommentRight(self,str = ''):
-		cc = self.getCommentChar()
-		i = cc.index('%s') if '%s' in cc else None
-		if i is not None:
-			return str + cc[i+2:]
-		else:
-			return str + ' ' + cc
+		elif self.inInstance is not None:
+			return self.inInstance.codewave.getRoot()
 	def removeCarret(self,txt):
 		return txt.replace(self.carretChar+self.carretChar, '[[[[quoted_carret]]]]') \
 							.replace(self.carretChar, '') \

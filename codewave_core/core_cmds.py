@@ -241,7 +241,7 @@ def initCmds():
 	})
 	
 	php = command.cmds.addCmd( command.Command('php'))
-	php.addDetector( detector.PairDetector({
+	php.addDetector(detector.PairDetector({
 		'result':'php:inner',
 		'opener':'<?php',
 		'closer':'?>',
@@ -255,11 +255,13 @@ def initCmds():
 			'beforeExecute' : closePhpForContent,
 			'alterResult' : wrapWithPhp
 		},
+				'comment': '<?php /* ~~content~~ */ ?>',
 				'php': '<?php\n\t~~content~~|\n?>',
 	})
 	
 	phpInner = php.addCmd( command.Command('inner'))
 	phpInner.addCmds({
+		'comment': '/* ~~content~~ */',
 		'if':   'if(|){\n\t~~content~~\n}',
 		'info': 'phpinfo();',
 		'echo': 'echo ${id}',
@@ -298,6 +300,7 @@ def initCmds():
 	
 	js = command.cmds.addCmd( command.Command('js'))
 	js.addCmds({
+		'comment': '/* ~~content~~ */',
 		'if':  'if(|){\n\t~~content~~\n}',
 		'log':  'if(window.console){\n\tconsole.log(~~content~~|)\n}',
 		'function':	'function |() {\n\t~~content~~\n}',
@@ -353,8 +356,8 @@ def exec_parent(instance):
 		instance.replaceEnd = instance.parent.replaceEnd
 		return res
 def getContent(instance):
-	if instance.codewave.context is not None:
-		return instance.codewave.context.content or ''
+	if instance.codewave.inInstance is not None:
+		return instance.codewave.inInstance.content or ''
 def wrapWithPhp(result,instance):
 	regOpen = re.compile(r"<\?php\s([\n\r\s]+)")
 	regClose = re.compile(r"([\n\r\s]+)\s\?>")
@@ -363,7 +366,7 @@ def closePhpForContent(instance):
 	instance.content = ' ?>'+(instance.content or '')+'<?php '
 class BoxCmd(command.BaseCommand):
 	def init(self):
-		self.helper =  box_helper.BoxHelper(self.instance.codewave)
+		self.helper = box_helper.BoxHelper(self.instance.context)
 		self.cmd = self.instance.getParam(['cmd'])
 		if self.cmd is not None:
 			self.helper.openText  = self.instance.codewave.brakets + self.cmd + self.instance.codewave.brakets
@@ -400,7 +403,7 @@ class BoxCmd(command.BaseCommand):
 
 class CloseCmd(command.BaseCommand):
 	def init(self):
-				self.helper = box_helper.BoxHelper(self.instance.codewave)
+		self.helper = box_helper.BoxHelper(self.instance.context)
 	def execute(self):
 		box = self.helper.getBoxForPos(self.instance.getPos())
 		if box is not None:
@@ -414,7 +417,7 @@ class EditCmd(command.BaseCommand):
 		self.cmdName = self.instance.getParam([0,'cmd'])
 		self.verbalize = self.instance.getParam([1]) in ['v','verbalize']
 		if self.cmdName is not None:
-			self.finder = self.instance.codewave.getFinder(self.cmdName) 
+			self.finder = self.instance.context.getFinder(self.cmdName) 
 			self.finder.useFallbacks = False
 			self.cmd = self.finder.find()
 		self.editable = self.cmd.isEditable() if self.cmd is not None else True
@@ -457,13 +460,15 @@ class NameSpaceCmd(command.BaseCommand):
 		self.name = self.instance.getParam([0])
 	def result(self):
 		if self.name is not None:
-			self.instance.codewave.getRoot().addNameSpace(self.name)
+			logger.log(self.instance);
+			self.instance.codewave.getRoot().context.addNameSpace(self.name)
 			return ''
 		else:
-			namespaces = self.instance.finder.namespaces
+			namespaces = self.instance.context.getNameSpaces()
 			txt = '~~box~~\n'
 			for nspc in namespaces :
-				txt += nspc+'\n'
+				if nspc != self.instance.cmd.fullName:
+					txt += nspc+'\n'
 			txt += '~~!close|~~\n~~/box~~'
 			parser = self.instance.getParserForText(txt)
 			return parser.parseAll()

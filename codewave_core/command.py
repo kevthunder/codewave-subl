@@ -1,6 +1,7 @@
 import codewave_core.storage as storage
 import codewave_core.logger as logger
 import codewave_core.util as util
+import codewave_core.context
 import codewave_core.codewave
 
 def _optKey(key,dict,defVal = None): 
@@ -83,7 +84,7 @@ class Command():
 			res.update(instance.cmdObj.getDefaults())
 		return res;
 	def result(self,instance):
-		if instance.cmdObj is not None:
+		if instance is not None and instance.cmdObj is not None:
 			return instance.cmdObj.result()
 		aliased = self.getAliased(instance)
 		if aliased is not None:
@@ -112,9 +113,9 @@ class Command():
 			return instance.aliasedCmd or None
 		if self.aliasOf is not None:
 			if instance is not None:
-				codewave = instance.codewave
+				context = instance.context
 			else:
-				codewave = codewave_core.codewave.Codewave()
+				context = codewave_core.context.Context()
 			aliasOf = self.aliasOf
 			if instance is not None:
 				aliasOf = aliasOf.replace('%name%',instance.cmdName)
@@ -122,7 +123,7 @@ class Command():
 				self.finder.useFallbacks = False
 				aliased = self.finder.find()
 			else:
-				aliased = codewave.getCmd(aliasOf)
+				aliased = context.getCmd(aliasOf)
 			if instance is not None:
 				instance.aliasedCmd = aliased or False
 			return aliased

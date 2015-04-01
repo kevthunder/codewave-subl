@@ -37,8 +37,8 @@ class CodewaveCommand(sublime_plugin.TextCommand):
 			codewave_core.logger.WRITE_FUNCT = self.printFunct
 			codewave_core.storage.CONFIG_FOLDER = os.path.join(sublime.packages_path(), 'Codewave')
 			codewave_core.codewave.init()
-			codewaves = {}
-			
+			# codewaves = {}
+		
 		key = getBufferKey(self.view) 
 		if key in codewaves :
 			cw = codewaves[key]

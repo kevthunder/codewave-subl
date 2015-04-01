@@ -8,6 +8,9 @@ class SublEditor(codewave_core.editor.Editor):
 		self.edit = None
 		self.namespace = 'sublime'
 		self.changeListeners = []
+	@property
+	def text(self):
+		return self.view.substr(sublime.Region(0, self.view.size()))
 	def getCursorPos(self):
 		sel = self.view.sel()
 		return {'start':sel[0].begin(), 'end':sel[0].end()}
