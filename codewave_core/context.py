@@ -1,4 +1,4 @@
-import codewave_core.cmd_finder as cmd_finder
+
 
 class Context():
 	def __init__(self,codewave = None):
@@ -30,6 +30,7 @@ class Context():
 		finder = self.getFinder(cmdName,nameSpaces)
 		return finder.find()
 	def getFinder(self,cmdName,nameSpaces = []):
+		import codewave_core.cmd_finder as cmd_finder
 		return cmd_finder.CmdFinder(cmdName, 
 			namespaces= nameSpaces,
 			useDetectors= self.isRoot(),
@@ -58,14 +59,19 @@ class Context():
 			return str + cc[i+2:]
 		else:
 			return str + ' ' + cc
+	def cmdInstanceFor(self,cmd):
+		import codewave_core.cmd_instance as cmd_instance
+		return cmd_instance.CmdInstance(cmd,self)
 	def getCommentChar(self):
 		if self.commentChar is not None:
 			return self.commentChar
 		cmd = self.getCmd('comment')
+		char = '<!-- %s -->'
 		if cmd is not None:
-			res = cmd.result(None)
+			inst = self.cmdInstanceFor(cmd)
+			inst.content = '%s'
+			res = inst.result()
 			if res is not None:
-				res = res.replace('~~content~~','%s')
-				self.commentChar = res
-				return res
-		return '<!-- %s -->'
+				char = res
+		self.commentChar = char
+		return self.commentChar

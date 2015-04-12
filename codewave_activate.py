@@ -32,12 +32,15 @@ class CodewaveCommand(sublime_plugin.TextCommand):
 			except Exception as e:
 				print("reloads failed :" + str(e))
 			
-		if debug or 'codewaves' not in vars() or codewaves is None :
+		if debug or 'codewaves' not in globals() or codewaves is None :
 			print('init codewave')
 			codewave_core.logger.WRITE_FUNCT = self.printFunct
 			codewave_core.storage.CONFIG_FOLDER = os.path.join(sublime.packages_path(), 'Codewave')
 			codewave_core.codewave.init()
-			# codewaves = {}
+			
+		if 'codewaves' not in globals():
+			codewave_core.logger.log(globals(),locals(),vars())
+			codewaves = {}
 		
 		key = getBufferKey(self.view) 
 		if key in codewaves :

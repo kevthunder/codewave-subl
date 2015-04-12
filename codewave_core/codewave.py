@@ -3,6 +3,7 @@ import codewave_core.logger as logger
 import codewave_core.util as util
 
 import codewave_core.cmd_instance as cmd_instance
+import codewave_core.positioned_cmd_instance as positioned_cmd_instance
 import codewave_core.cmd_finder as cmd_finder
 import codewave_core.text_parser as text_parser
 import codewave_core.closing_promp as closing_promp
@@ -45,6 +46,9 @@ class Codewave():
 	def onActivationKey(self):
 		self.process = process.Process()
 		logger.log('activation key')
+		self.runAtCursorPos()
+		self.process = None
+	def runAtCursorPos(self):
 		cmd = self.commandOnCursorPos()
 		if cmd is not None :
 			cmd.init()
@@ -52,12 +56,10 @@ class Codewave():
 			cmd.execute()
 		else:
 			cpos = self.editor.getCursorPos()
-			if cpos['start'] == cpos['end'] :
+			if cpos['start'] == cpos['end']:
 				self.addBrakets(cpos['start'],cpos['end'])
 			else:
 				self.promptClosingCmd(cpos['start'],cpos['end'])
-
-		self.process = None
 	def commandOnCursorPos(self):
 		cpos = self.editor.getCursorPos()
 		return self.commandOnPos(cpos['end'])
@@ -74,7 +76,7 @@ class Codewave():
 			next = self.findNextBraket(pos-1)
 			if next is None or self.countPrevBraket(prev) % 2 != 0 :
 				return None
-		return cmd_instance.CmdInstance(self,prev,self.editor.textSubstr(prev,next+len(self.brakets)))
+		return positioned_cmd_instance.PositionedCmdInstance(self,prev,self.editor.textSubstr(prev,next+len(self.brakets)))
 	def nextCmd(self,start = 0):
 		pos = start
 		beginning = None
@@ -85,7 +87,7 @@ class Codewave():
 			pos = f.pos + len(f.str)
 			if f.str == self.brakets:
 				if beginning is not None:
-					return cmd_instance.CmdInstance(self, beginning, self.editor.textSubstr(beginning, f.pos+len(self.brakets)))
+					return positioned_cmd_instance.PositionedCmdInstance(self, beginning, self.editor.textSubstr(beginning, f.pos+len(self.brakets)))
 				else:
 					beginning = f.pos
 			else:
@@ -138,20 +140,20 @@ class Codewave():
 		if f is not None:
 			return f.pos 
 	def findAnyNext(self,start,strings,direction = 1):
-		pos = start
-		while True :
-			if 0 > pos or pos >= self.editor.textLen() :
-				return None
-			for stri in strings:
-				start, end = pos, pos + len(stri) * direction
-				if end < start :
-					start, end = end, start
-				if stri == self.editor.textSubstr(start,end):
-					return util.StrPos(
-						 pos-len(stri) if direction < 0 else pos,
-						 stri
-					)
-			pos += direction
+		if direction > 0:
+			text = self.editor.textSubstr(start,self.editor.textLen())
+		else:
+			text = self.editor.textSubstr(0,start)
+		bestPos = bestStr = None
+		for stri in strings:
+			pos = text.find(stri) if direction > 0  else text.rfind(stri)
+			if pos != -1:
+				if not bestPos is not None or bestPos*direction > pos*direction:
+					bestPos = pos
+					bestStr = stri
+		if bestStr is not None:
+			return util.StrPos((bestPos + start if direction > 0 else bestPos),bestStr)
+		return None
 	def findMatchingPair(self,startPos,opening,closing,direction = 1):
 		pos = startPos
 		nested = 0
@@ -187,10 +189,11 @@ class Codewave():
 				break
 			pos = cmd.getEndPos()
 			self.editor.setCursorPos(pos)
-			if recursive and cmd.content is not None and (cmd.getCmd() is None or not cmd.cmd.getOption('preventParseAll')):
+			cmd.init()
+			if recursive and cmd.content is not None and (cmd.getCmd() is None or not cmd.getOption('preventParseAll')):
 				parser = Codewave(text_parser.TextParser(cmd.content), parent=self)
 				cmd.content = parser.parseAll()
-			if cmd.init().execute() is not None:
+			if cmd.execute() is not None:
 				if cmd.replaceEnd is not None:
 					pos = cmd.replaceEnd
 				else:
@@ -199,7 +202,7 @@ class Codewave():
 	def getText(self):
 		return self.editor.text
 	def isRoot(self):
-		return self.parent is None and (self.context is None or self.context.finder is None)
+		return self.parent is None and (self.inInstance is None or self.inInstance.finder is None)
 	def getRoot(self):
 		if self.isRoot:
 			return self

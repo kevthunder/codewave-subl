@@ -32,7 +32,7 @@ class SublEditor(codewave_core.editor.Editor):
 	def endUndoAction(self):
 		pass
 	def getLang(self):
-		return self.view.settings().get('syntax').split('/').pop().split('.')[0]
+		return self.view.settings().get('syntax').split('/').pop().split('.')[0].replace(' ','_')
 	def getEmmetContextObject(self):
 		module = __import__("emmet-plugin")
 		if not module.ctx :

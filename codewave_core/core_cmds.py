@@ -5,6 +5,7 @@ import codewave_core.util as util
 import codewave_core.logger as logger
 import codewave_core.detector as detector
 import codewave_core.box_helper as box_helper
+import codewave_core.edit_cmd_prop as edit_cmd_prop
 
 
 def initCmds():
@@ -201,15 +202,60 @@ def initCmds():
 			'cls' : CloseCmd
 		},
 		'edit':{
-			'cmds' : {
-				'source': util.merge(makeVarCmd('source'),{
-					'preventParseAll' : True
-				}),
+			'cmds' : editCmdSetCmds({
 				'save':{
 					'aliasOf': 'core:exec_parent'
 				}
-			},
+			}),
 			'cls' : EditCmd
+		},
+		'rename':{
+			'cmds' : {
+				'not_applicable' : textwrap.dedent("""
+					~~box~~
+					You cant rename a command you did not create yourself.
+					~~!close|~~
+					~~/box~~
+					"""),
+				'not_found' : textwrap.dedent("""
+					~~box~~
+					Command not found
+					~~!close|~~
+					~~/box~~
+					""")
+			},
+			'result' : renameCommand,
+			'parse' : True
+		},
+		'remove':{
+			'cmds' : {
+				'not_applicable' : textwrap.dedent("""
+					~~box~~
+					You cant remove a command you did not create yourself.
+					~~!close|~~
+					~~/box~~
+					"""),
+				'not_found' : textwrap.dedent("""
+					~~box~~
+					Command not found
+					~~!close|~~
+					~~/box~~
+					""")
+			},
+			'result' : removeCommand,
+			'parse' : True
+		},
+		'alias':{
+			'cmds' : {
+				'not_found' : textwrap.dedent("""
+					~~box~~
+					Command not found
+					~~!close|~~
+					~~/box~~
+					""")
+			},
+			'result' : aliasCommand,
+			'parse' : True
 		},
 		'namespace':{
 			'cls' : NameSpaceCmd
@@ -231,6 +277,7 @@ def initCmds():
 			'nameToParam' : 'abbr'
 		},
 	})
+	
 	css = command.cmds.addCmd(command.Command('css'))
 	css.addCmds({
 		'fallback':{
@@ -242,24 +289,24 @@ def initCmds():
 	
 	php = command.cmds.addCmd( command.Command('php'))
 	php.addDetector(detector.PairDetector({
-		'result':'php:inner',
-		'opener':'<?php',
-		'closer':'?>',
+		'result': 'php:inner',
+		'opener': '<?php',
+		'closer': '?>',
 		'else': 'php:outer'
 	}))
 
-	phpOuter = php.addCmd( command.Command('outer'))
+	phpOuter = php.addCmd(command.Command('outer'))
 	phpOuter.addCmds({
 		'fallback':{
 			'aliasOf' : 'php:inner:%name%',
 			'beforeExecute' : closePhpForContent,
 			'alterResult' : wrapWithPhp
 		},
-				'comment': '<?php /* ~~content~~ */ ?>',
-				'php': '<?php\n\t~~content~~|\n?>',
+		'comment': '<?php /* ~~content~~ */ ?>',
+		'php': '<?php\n\t~~content~~|\n?>',
 	})
 	
-	phpInner = php.addCmd( command.Command('inner'))
+	phpInner = php.addCmd(command.Command('inner'))
 	phpInner.addCmds({
 		'comment': '/* ~~content~~ */',
 		'if':   'if(|){\n\t~~content~~\n}',
@@ -298,7 +345,8 @@ def initCmds():
 			""")
 	})
 	
-	js = command.cmds.addCmd( command.Command('js'))
+	js = command.cmds.addCmd(command.Command('js'))
+	command.cmds.addCmd(command.Command('javascript',{ 'aliasOf': 'js' }))
 	js.addCmds({
 		'comment': '/* ~~content~~ */',
 		'if':  'if(|){\n\t~~content~~\n}',
@@ -328,20 +376,33 @@ def initCmds():
 	
 command.cmdInitialisers.add(initCmds)
 
-def set_var(name,instance):
+def setVarCmd(name, base = {}) :
+	base['execute'] = (lambda instance: setVar(name,instance))
+	return base
+def setVar(name,instance):
 	val = None
 	p = instance.getParam(0)
 	if p is not None :
 		val = p
-	elif instance.content :
+	elif instance.content:
 		val = instance.content
 	if val is not None :
 		instance.codewave.vars[name] = val
 		return val
-def makeVarCmd(name) :
-	return {
-		'execute': (lambda instance: set_var(name,instance))
-	}
+
+def setBoolVarCmd(name, base = {}) :
+	base['execute'] = (lambda instance: setBoolVar(name,instance))
+	return base
+def setBoolVar(name,instance):
+	val = None
+	p = instance.getParam(0)
+	if p is not None :
+		val = p
+	elif instance.content:
+		val = instance.content
+	if val is not None and val not in ['0','False','no']:
+		instance.codewave.vars[name] = True
+		return val
 
 def no_execute(instance):
 	reg = re.compile("^("+util.escapeRegExp(instance.codewave.brakets) + ')' + util.escapeRegExp(instance.codewave.noExecuteChar))
@@ -362,6 +423,55 @@ def wrapWithPhp(result,instance):
 	regOpen = re.compile(r"<\?php\s([\n\r\s]+)")
 	regClose = re.compile(r"([\n\r\s]+)\s\?>")
 	return '<?php ' + re.sub(regOpen, r'\1<?php ', re.sub(regClose, r' ?>\1', result)) + ' ?>'
+def renameCommand(instance):
+	savedCmds = storage.load('cmds')
+	origninalName = instance.getParam([0,'from'])
+	newName = instance.getParam([1,'to'])
+	if origninalName is not None and newName is not None:
+		cmd = instance.context.getCmd(origninalName)
+		console.log(cmd)
+		if origninalName in savedCmds and cmd is not None:
+			if not ':' in newName:
+				newName = cmd.fullName.replace(origninalName,'') + newName
+			cmdData = savedCmds[origninalName]
+			command.cmds.setCmdData(newName,cmdData)
+			cmd.unregister()
+			savedCmds[newName] = cmdData
+			del savedCmds[origninalName]
+			storage.save('cmds',savedCmds)
+			return ""
+		elif cmd is not None :
+			return "~~not_applicable~~"
+		else:
+			return "~~not_found~~"
+def removeCommand(instance):
+	name = instance.getParam([0,'name'])
+	if name is not None:
+		savedCmds = storage.load('cmds')
+		cmd = instance.context.getCmd(name)
+		if name in savedCmds and cmd is not None:
+			cmdData = savedCmds[name]
+			cmd.unregister()
+			del savedCmds[name]
+			storage.save('cmds',savedCmds)
+			return ""
+		elif cmd is not None :
+			return "~~not_applicable~~"
+		else:
+			return "~~not_found~~"
+def aliasCommand(instance):
+	name = instance.getParam([0,'name'])
+	alias = instance.getParam([1,'alias'])
+	if name is not None and alias is not None:
+		cmd = instance.context.getCmd(name)
+		if cmd is not None:
+			cmd = cmd.getAliased() or cmd
+			# unless ':' in alias
+				# alias = cmd.fullName.replace(name,'') + alias
+			command.saveCmd(alias, { aliasOf: cmd.fullName })
+			return ""
+		else:
+			return "~~not_found~~"
 def closePhpForContent(instance):
 	instance.content = ' ?>'+(instance.content or '')+'<?php '
 class BoxCmd(command.BaseCommand):
@@ -434,33 +544,46 @@ class EditCmd(command.BaseCommand):
 	def resultWithContent(self):
 			parser = self.instance.getParserForText(self.content)
 			parser.parseAll()
-			command.saveCmd(self.cmdName, {
-				'result': parser.vars['source']
-			})
+			data = {}
+			for p in editCmdProps:
+				p.writeFor(parser,data)
+			command.saveCmd(self.cmdName, data)
 			return ''
+	def propsDisplay(self):
+			cmd = self.cmd
+			return "\n".join([p for p in map(lambda p: p.display(cmd), editCmdProps) if p is not None])
 	def resultWithoutContent(self):
 		if not self.cmd or self.editable:
-			source = self.cmd.resultStr if self.cmd else '|'
 			name = self.cmd.fullName if self.cmd else self.cmdName
 			parser = self.instance.getParserForText(textwrap.dedent(
 				"""
 				~~box cmd:"%(cmd)s"~~
-				~~!source~~
-				%(source)s
-				~~/source~~
+				%(props)s
 				~~!save~~ ~~!close~~
 				~~/box~~
-				""") % {'cmd': self.instance.cmd.fullName + ' ' +name, 'source': source})
+				""") % {'cmd': self.instance.cmd.fullName + ' ' +name, 'props': self.propsDisplay()})
+			parser.checkCarret = False
 			return parser.getText() if self.verbalize else parser.parseAll()
 
-
-
+def editCmdSetCmds(base):
+	for p in editCmdProps:
+		p.setCmd(base)
+	return base
+editCmdProps = [
+	edit_cmd_prop.revBool('no_carret',         {'opt':'checkCarret'}),
+	edit_cmd_prop.revBool('no_parse',          {'opt':'parse'}),
+	edit_cmd_prop.bool(   'prevent_parse_all', {'opt':'preventParseAll'}),
+	edit_cmd_prop.bool(   'replace_box',       {'opt':'replaceBox'}),
+	edit_cmd_prop.string( 'name_to_param',     {'opt':'nameToParam'}),
+	edit_cmd_prop.string( 'alias_of',          {'var':'aliasOf', 'carret':True}),
+	edit_cmd_prop.source( 'help',              {'funct':'help', 'showEmpty':True}),
+	edit_cmd_prop.source( 'source',            {'var':'resultStr', 'dataName':'result', 'showEmpty':True, 'carret':True}),
+]
 class NameSpaceCmd(command.BaseCommand):
 	def init(self):
 		self.name = self.instance.getParam([0])
 	def result(self):
 		if self.name is not None:
-			logger.log(self.instance);
 			self.instance.codewave.getRoot().context.addNameSpace(self.name)
 			return ''
 		else:

@@ -1,3 +1,4 @@
+import textwrap
 import codewave_core.storage as storage
 import codewave_core.logger as logger
 import codewave_core.util as util
@@ -49,7 +50,7 @@ class Command():
 			)
 			self.depth = (
 				self._parent.depth + 1
-				if self._parent is not None
+				if self._parent is not None and self._parent.depth is not None
 				else 0
 			)
 	def init(self):
@@ -57,105 +58,69 @@ class Command():
 			self._inited = True
 			self.parseData(self.data)
 		return self
+	def unregister(self):
+		self._parent.removeCmd(self)
 	def isEditable(self):
-		return self.resultStr is not None
+		return self.resultStr is not None or self.aliasOf is not None
 	def isExecutable(self):
-		for p in ['resultStr','resultFunct','aliasOf','cls','executeFunct'] :
+		aliased = self.getAliased()
+		if aliased is not None:
+			return aliased.isExecutable()
+		for p in ['resultStr','resultFunct','cls','executeFunct']:
 			if getattr(self, p) is not None:
 				return True
 		return False
-	def resultIsAvailable(self,instance = None):
-		if instance is not None and instance.cmdObj is not None:
-			return instance.cmdObj.resultIsAvailable()
-		aliased = self.getAliased(instance)
+	def resultIsAvailable(self):
+		aliased = self.getAliased()
 		if aliased is not None:
-			return aliased.resultIsAvailable(instance)
+			return aliased.resultIsAvailable()
 		for p in ['resultStr','resultFunct']:
 			if getattr(self, p) is not None:
 				return True
 		return False
-	def getDefaults(self,instance = None):
+	def getDefaults(self):
 		res = {}
-		aliased = self.getAliased(instance)
+		aliased = self.getAliased()
 		if aliased is not None:
-			res.update(aliased.getDefaults(instance))
+			res.update(aliased.getDefaults())
 		res.update(self.defaults)
-		if instance is not None and instance.cmdObj is not None:
-			res.update(instance.cmdObj.getDefaults())
-		return res;
-	def result(self,instance):
-		if instance is not None and instance.cmdObj is not None:
-			return instance.cmdObj.result()
-		aliased = self.getAliased(instance)
-		if aliased is not None:
-			return aliased.result(instance)
-		if self.resultFunct is not None:
-			return self.resultFunct(instance)
-		if self.resultStr is not None:
-			return self.resultStr
-	def execute(self,instance):
-		if instance.cmdObj is not None:
-			return instance.cmdObj.execute()
-		aliased = self.getAliased(instance)
-		if aliased is not None:
-			return aliased.execute(instance)
-		if self.executeFunct is not None:
-			return self.executeFunct(instance)
-	def getExecutableObj(self,instance):
-		self.init()
-		if self.cls is not None:
-			return self.cls(instance)
-		aliased = self.getAliased(instance)
-		if aliased is not None:
-			return aliased.getExecutableObj(instance)
-	def getAliased(self,instance = None):
-		if instance is not None and instance.cmd == self and instance.aliasedCmd is not None :
-			return instance.aliasedCmd or None
+		return res
+	def _aliasedFromFinder(self,finder):
+		finder.useFallbacks = False
+		finder.mustExecute = False
+		return finder.find()
+	def getAliased(self):
 		if self.aliasOf is not None:
-			if instance is not None:
-				context = instance.context
-			else:
-				context = codewave_core.context.Context()
-			aliasOf = self.aliasOf
-			if instance is not None:
-				aliasOf = aliasOf.replace('%name%',instance.cmdName)
-				self.finder = instance._getFinder(aliasOf)
-				self.finder.useFallbacks = False
-				aliased = self.finder.find()
-			else:
-				aliased = context.getCmd(aliasOf)
-			if instance is not None:
-				instance.aliasedCmd = aliased or False
-			return aliased
+			context = codewave_core.context.Context()
+			return self._aliasedFromFinder(context.getFinder(self.aliasOf))
 	def setOptions(self,data):
 		for key, val in data.items():
 			if key in self.defaultOptions:
 				self.options[key] = val
-	def getOptions(self,instance = None):
-		if instance is not None and instance.cmdOptions is not None:
-			return instance.cmdOptions
+	def _optionsForAliased(self,aliased):
 		opt = {}
 		opt.update(self.defaultOptions)
-		aliased = self.getAliased(instance)
 		if aliased is not None:
-			opt.update(aliased.getOptions(instance))
+			opt.update(aliased.getOptions())
 		opt.update(self.options)
-		if instance is not None and instance.cmdObj is not None:
-			opt.update(instance.cmdObj.getOptions())
-		if instance is not None:
-			instance.cmdOptions = opt
 		return opt
-	def getOption(self,key,instance = None):
-		options = self.getOptions(instance)
+	def getOptions(self):
+		return self._optionsForAliased(self.getAliased())
+	def getOption(self,key):
+		options = self.getOptions()
 		if key in options:
 			return options[key]
+	def help(self):
+		cmd = self.getCmd('help')
+		if cmd is not None:
+			return cmd.init().resultStr
 	def parseData(self,data):
 		self.data = data
 		if isinstance(data, str):
 			self.resultStr = data
 			self.options['parse'] = True
 			return True
-		elif isinstance(data,dict):
+		elif isinstance(data,dict) :
 			return self.parseDictData(data)
 		return False
 	def parseDictData(self,data):
@@ -175,9 +140,9 @@ class Command():
 		self.setOptions(data)
 		
 		if 'help' in data:
-			self.addCmd(self, Command('help',data['help'],self))
+			self.addCmd(Command('help',data['help'],self))
 		if 'fallback' in data:
-			self.addCmd(self, Command('fallback',data['fallback'],self))
+			self.addCmd(Command('fallback',data['fallback'],self))
 			
 		if 'cmds' in data:
 			self.addCmds(data['cmds'])
@@ -203,6 +168,8 @@ class Command():
 		for cmd in self.cmds:
 			if cmd.name == name:
 				return cmd
+	def setCmdData(self,fullname,data):
+		self.setCmd(fullname,Command(fullname.split(':').pop(),data))
 	def setCmd(self,fullname,cmd):
 		space,name = util.splitFirstNamespace(fullname)
 		if space is not None:
@@ -238,7 +205,14 @@ def initCmds():
 	global cmdInitialisers
 	cmds = Command(None,{
 		'cmds':{
-			'hello':'Hello, World!'
+			'hello':{
+				'help': textwrap.dedent("""
+				"Hello, world!" is typically one in the simplest programs possible in
+				most programming languages, it is by tradition often (...) used to
+				verify that a language or system is operating correctly -wikipedia
+				"""),
+				'result': 'Hello, World!'
+			}
 		}
 	})
 	for initialiser in cmdInitialisers:
@@ -258,8 +232,13 @@ def loadCmds():
 	savedCmds = storage.load('cmds')
 	if savedCmds is not None :
 		for fullname, data in savedCmds.items():
-			cmds.setCmd(fullname, Command(fullname.split(':').pop(), data))
+			cmds.setCmdData(fullname, data)
 	
+def resetSaved():
+  storage.save('cmds',{})
+  
+
+
 class BaseCommand():
 	def __init__(self,instance):
 		self.instance = instance
@@ -271,5 +250,4 @@ class BaseCommand():
 		return {}
 	def getOptions(self):
 		return {}
-				
 				

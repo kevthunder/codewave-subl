@@ -60,7 +60,7 @@ class CmdFinder():
 		cur_space,cur_rest = util.splitFirstNamespace(name)
 		if cur_space is not None and cur_space == space:
 			name = cur_rest
-		if rest is not None :
+		if rest is not None:
 			name = rest + ':' + name
 		return name
 	def getDirectNames(self):
@@ -90,12 +90,12 @@ class CmdFinder():
 		self.root.init()
 		posibilities = []
 		for space, names in self.getNamesWithPaths().items():
-			next = self.root.getCmd(space)
+			next = self.getCmdFollowAlias(space)
 			if next is not None :
 				posibilities += CmdFinder(names, parent=self, root=next).findPosibilities()
 		for nspc in self.context.getNameSpaces():
 			nspcName,rest = util.splitFirstNamespace(nspc,True)
-			next = self.root.getCmd(nspcName)
+			next = self.getCmdFollowAlias(nspcName)
 			if next is not None :
 				posibilities += CmdFinder(self.applySpaceOnNames(nspc), parent=self, root=next).findPosibilities()
 		for name in self.getDirectNames():
@@ -107,19 +107,29 @@ class CmdFinder():
 			if self.cmdIsValid(fallback):
 				posibilities.append(fallback)
 		return posibilities
+	def getCmdFollowAlias(self,name):
+		cmd = self.root.getCmd(name)
+		if cmd is not None :
+			cmd.init()
+			if cmd.aliasOf is not None:
+				return cmd.getAliased()
+		return cmd
 	def cmdIsValid(self,cmd):
 		if cmd is None:
 			return False
 		cmd.init()
 		return not self.mustExecute or cmd.isExecutable()
+	def cmdScore(self,cmd):
+		score = cmd.depth
+		if cmd.name == 'fallback' :
+			score -= 1000
+		return score
 	def bestInPosibilities(self,poss):
 		if len(poss) > 0:
 			best = None
 			bestScore = None
 			for p in poss:
-				score = p.depth
-				if p.name == 'fallback' :
-						score -= 1000
+				score = self.cmdScore(p)
 				if best is None or score >= bestScore:
 					bestScore = score
 					best = p
