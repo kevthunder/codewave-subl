@@ -6,7 +6,7 @@ import codewave_core.command as command
 import codewave_core.text_parser as text_parser
 import codewave_core.box_helper as box_helper
 
-class CmdInstance():
+class CmdInstance(object):
 	def __init__(self, cmd = None, context = None):
 		self.cmd,self.context = cmd,context
 		self.content = self.cmdObj = None

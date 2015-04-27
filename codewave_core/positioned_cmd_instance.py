@@ -9,10 +9,10 @@ import codewave_core.box_helper as box_helper
 
 class PositionedCmdInstance(cmd_instance.CmdInstance):
 	def __init__(self, codewave,pos,str):
-		super(PositionedCmdInstance, self).__init__()
+		super(self.__class__, self).__init__()
 		self.codewave,self.pos,self.str = codewave,pos,str
 		self.replaceStart = self.replaceEnd = None
-		self.inBox = self.closingPos = None
+		self.multiPos = self.inBox = self.closingPos = None
 		self._prevEOL = self._nextEOL = self._rawWithFullLines = self._sameLinesPrefix = self._sameLinesSuffix = None
 		self.inited = False
 		if not self.isEmpty():
@@ -123,6 +123,8 @@ class PositionedCmdInstance(cmd_instance.CmdInstance):
 	def _getParentCmds(self):
 		p = self.codewave.getEnclosingCmd(self.getEndPos())
 		self.parent = p.init() if p is not None else None
+	def setMultiPos(self,multiPos):
+		self.multiPos = multiPos
 	def prevEOL(self):
 		if self._prevEOL is None:
 			self._prevEOL = self.codewave.findLineStart(self.pos)
@@ -239,6 +241,21 @@ class PositionedCmdInstance(cmd_instance.CmdInstance):
 				cursorPos = repl.start+len(repl.prefix)+p
 			repl.text = self.codewave.removeCarret(repl.text)
 		return cursorPos
+	def checkMulti(self,repl):
+		if self.multiPos is not None and len(self.multiPos) > 1:
+			replacements = [repl]
+			originalText = repl.originalTextWith(self.codewave.editor)
+			for i, pos in enumerate(self.multiPos):
+				if i == 0:
+					originalPos = pos.start
+				else:
+					newRepl = repl.copy().applyOffset(pos.start-originalPos)
+					if newRepl.originalTextWith(self.codewave.editor) == originalText:
+						replacements.append(newRepl)
+					logger.log(replacements)
+			return replacements
+		else:
+			return [repl]
 	def replaceWith(self,text):
 		repl =  util.Replacement(self.pos,self.getEndPos(),text)
 		
@@ -248,8 +265,9 @@ class PositionedCmdInstance(cmd_instance.CmdInstance):
 			repl.text = self.applyIndent(repl.text)
 			
 		cursorPos = self.getCursorFromResult(repl)
-			
-		repl.applyToEditor(self.codewave.editor)
-		self.codewave.editor.setCursorPos(cursorPos)
+		repl.selections = [util.Pos(cursorPos, cursorPos)]
+		replacements = self.checkMulti(repl)
+		self.codewave.editor.applyReplacements(replacements)
+
 		self.replaceStart = repl.start
 		self.replaceEnd = repl.resEnd()

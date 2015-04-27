@@ -483,27 +483,42 @@ class BoxCmd(command.BaseCommand):
 			self.helper.closeText = self.instance.codewave.brakets + self.instance.codewave.closeChar + self.cmd.split(" ")[0] + self.instance.codewave.brakets
 		self.helper.deco = self.instance.codewave.deco
 		self.helper.pad = 2
+		self._bounds = None
 		
-		if self.instance.content:
-			bounds = self.helper.textBounds(self.instance.content)
-			width, height = bounds.width, bounds.height
+	def height(self):
+		if self.bounds() is not None:
+			height = self.bounds().height
 		else:
-			width = 50
 			height = 3
-		
-		params = ['width']
-		if len(self.instance.params) > 1 :
-			params.append(0)
-		self.helper.width = max(self.minWidth(), self.instance.getParam(params, width))
-			
+
 		params = ['height']
 		if len(self.instance.params) > 1 :
 			params.append(1)
 		elif len(self.instance.params) > 0:
 			params.append(0)
-		self.helper.height = self.instance.getParam(params,height)
+		return self.instance.getParam(params,height)
+
+	def width(self):
+		if self.bounds() is not None:
+			width = self.bounds().width
+		else:
+			width = 3
+
+		params = ['width']
+		if len(self.instance.params) > 1 :
+			params.append(0)
+		return  max(self.minWidth(), self.instance.getParam(params, width))
+
+  
+	def bounds(self):	
+		if self.instance.content is not None:
+			if self._bounds is None:
+				self._bounds = self.helper.textBounds(self.instance.content)
+			return self._bounds
 		
 	def result(self):
+		self.helper.height = self.height()
+		self.helper.width = self.width()
 		return self.helper.draw(self.instance.content)
 	def minWidth(self):
 		if self.cmd is not None:

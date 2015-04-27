@@ -2,7 +2,7 @@
 import codewave_core.command as command
 import codewave_core.core_cmds
 
-class EditCmdProp():
+class EditCmdProp(object):
 	def __init__(self, name,options):
 		self.name,options = name,options
 		defaults = {
@@ -48,7 +48,7 @@ class EditCmdProp():
 		
 class source(EditCmdProp):
 	def valFromCmd(self,cmd):
-		res = super(source, self).valFromCmd(cmd)
+		res = super(self.__class__, self).valFromCmd(cmd)
 		if res is not None :
 			res = res.replace('|', '||')
 		return res

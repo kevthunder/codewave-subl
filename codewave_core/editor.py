@@ -45,3 +45,21 @@ class Editor():
 		raise NotImplementedError
 	def removeChangeListener(self,callback):
 		raise NotImplementedError
+	
+	def applyReplacements(self,replacements):
+		selections = []
+		offset = 0
+		for repl in replacements:
+			repl.applyOffset(offset)
+			repl.applyToEditor(self)
+			offset += repl.offsetAfter()
+			
+			selections += repl.selections
+		self.applyReplacementsSelections(selections)
+			
+	def applyReplacementsSelections(self,selections):
+		if len(selections) > 0:
+			if self.allowMultiSelection():
+				self.setMultiSel(selections)
+			else:
+				self.setCursorPos(selections[0].start,selections[0].end)

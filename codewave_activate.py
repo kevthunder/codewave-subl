@@ -39,7 +39,6 @@ class CodewaveCommand(sublime_plugin.TextCommand):
 			codewave_core.codewave.init()
 			
 		if 'codewaves' not in globals():
-			codewave_core.logger.log(globals(),locals(),vars())
 			codewaves = {}
 		
 		key = getBufferKey(self.view) 

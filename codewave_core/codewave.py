@@ -49,20 +49,26 @@ class Codewave():
 		self.runAtCursorPos()
 		self.process = None
 	def runAtCursorPos(self):
-		cmd = self.commandOnCursorPos()
-		if cmd is not None :
-			cmd.init()
-			logger.log(cmd)
-			cmd.execute()
+		if self.editor.allowMultiSelection():
+			self.runAtMultiPos(self.editor.getMultiSel())
 		else:
-			cpos = self.editor.getCursorPos()
-			if cpos['start'] == cpos['end']:
-				self.addBrakets(cpos['start'],cpos['end'])
+			self.runAtPos(self.editor.getCursorPos())
+	def runAtPos(self,pos):
+		self.runAtMultiPos([pos])
+	def runAtMultiPos(self,multiPos):
+		if len(multiPos) > 0:
+			cmd = self.commandOnPos(multiPos[0].end)
+			if cmd is not None :
+				if len(multiPos) > 1:
+					cmd.setMultiPos(multiPos)
+				cmd.init()
+				logger.log(cmd)
+				cmd.execute()
 			else:
-				self.promptClosingCmd(cpos['start'],cpos['end'])
-	def commandOnCursorPos(self):
-		cpos = self.editor.getCursorPos()
-		return self.commandOnPos(cpos['end'])
+				if multiPos[0].start == multiPos[0].end:
+					self.addBrakets(multiPos)
+				else:
+					self.promptClosingCmd(multiPos)
 	def commandOnPos(self,pos):
 		if self.precededByBrakets(pos) and self.followedByBrakets(pos) and self.countPrevBraket(pos) % 2 == 1 :
 			prev = pos-len(self.brakets)
@@ -170,17 +176,14 @@ class Codewave():
 			else:
 				nested+=1
 		return None
-	def addBrakets(self,start, end):
-		if start == end:
-			self.editor.insertTextAt(self.brakets+self.brakets,start)
-		else:
-			self.editor.insertTextAt(self.brakets,end)
-			self.editor.insertTextAt(self.brakets,start)
-		self.editor.setCursorPos(end+len(self.brakets))
-	def promptClosingCmd(self,start, end):
+	def addBrakets(self,pos):
+		pos = util.PosCollection(pos)
+		replacements = list(map( lambda r: r.selectContent(), pos.wrap(self.brakets,self.brakets)))
+		self.editor.applyReplacements(replacements)
+	def promptClosingCmd(self,selections):
 		if self.closingPromp is not None:
 			self.closingPromp.stop()
-		self.closingPromp = closing_promp.ClosingPromp(self,start, end).begin()
+		self.closingPromp = closing_promp.newFor(self, selections).begin()
 	def parseAll(self,recursive = True):
 		pos = 0
 		while True:
@@ -211,14 +214,9 @@ class Codewave():
 		elif self.inInstance is not None:
 			return self.inInstance.codewave.getRoot()
 	def removeCarret(self,txt):
-		return txt.replace(self.carretChar+self.carretChar, '[[[[quoted_carret]]]]') \
-							.replace(self.carretChar, '') \
-							.replace('[[[[quoted_carret]]]]', self.carretChar)
+		return util.removeCarret(txt,self.carretChar)
 	def getCarretPos(self,txt):
-		txt = txt.replace(self.carretChar+self.carretChar, ' ')
-		if self.carretChar in txt :
-			return txt.index(self.carretChar)
-	
+		return util.getCarretPos(txt,self.carretChar)
 	def regMarker(self,flags=0):
 		return re.compile(util.escapeRegExp(self.marker), flags)
 	def removeMarkers(self,text):
