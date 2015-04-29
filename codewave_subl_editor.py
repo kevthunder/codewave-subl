@@ -13,7 +13,7 @@ class SublEditor(codewave_core.editor.Editor):
 		return self.view.substr(sublime.Region(0, self.view.size()))
 	def getCursorPos(self):
 		sel = self.view.sel()
-		return {'start':sel[0].begin(), 'end':sel[0].end()}
+		return codewave_core.util.Pos(sel[0].begin(), sel[0].end())
 	def textSubstr(self,start,end):
 		return self.view.substr(sublime.Region(start, end))
 	def textLen(self):

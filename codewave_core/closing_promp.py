@@ -31,7 +31,8 @@ class ClosingPromp():
 			self.resume()
 			
 	def skipEvent(self,ch):
-		return ch is not None and ch.charCodeAt(0) != 32
+		logger.log(self)
+		return ch is not None and isinstance(ch, str) and ch.charCodeAt(0) != 32
 	
 	def resume(self):
 		pass
@@ -56,13 +57,12 @@ class ClosingPromp():
 					start = None
 		self.codewave.editor.applyReplacements(replacements)
 	def getSelections(self):
-		self.codewave.editor.getMultiSel()
+		return self.codewave.editor.getMultiSel()
 	def stop(self):
 		self.started = False
 		if self.codewave.closingPromp == self:
 			self.codewave.closingPromp = None 
-		if self.proxyOnChange is not None:
-			self.codewave.editor.removeChangeListener(self.proxyOnChange)
+		self.codewave.editor.removeChangeListener(self.onChange)
 	def cancel(self):
 		if self.typed() != False:
 			self.cancelSelections(self.getSelections())
@@ -96,7 +96,7 @@ class ClosingPromp():
 	def whithinOpenBounds(self,pos):
 		for i, repl in enumerate(self.replacements):
 			targetPos = self.startPosAt(i)
-			targetText = self.codewave.brakets + self.typed() + self.codewave.brakets
+			targetText = self.codewave.brakets + (self.typed() or '') + self.codewave.brakets
 			if targetPos.innerContainsPos(pos) and targetPos.textFromEditor(self.codewave.editor) == targetText:
 				return targetPos
 		return False
@@ -109,8 +109,8 @@ class ClosingPromp():
 		return False
 	def startPosAt(self,index):
 		return util.Pos(
-				self.replacements[index].selections[0].start + len(self.typed()) * (index*2),
-				self.replacements[index].selections[0].end + len(self.typed()) * (index*2 +1)
+				self.replacements[index].selections[0].start + len(self.typed() or '') * (index*2),
+				self.replacements[index].selections[0].end + len(self.typed() or '') * (index*2 +1)
 			).wrappedBy(self.codewave.brakets, self.codewave.brakets)
 	def endPosAt(self,index):
 		return util.Pos(

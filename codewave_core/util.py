@@ -17,7 +17,7 @@ class Pos():
 	def wrappedBy(self,prefix,suffix):
 		return WrappedPos(self.start - len(prefix), self.start, self.end, self.end + len(suffix))
 	def textFromEditor(self,editor):
-		editor.textSubstr(self.start, self.end)
+		return editor.textSubstr(self.start, self.end)
 	def applyOffset(self,offset):
 		if offset != 0:
 			self.start += offset
@@ -48,7 +48,7 @@ class Size():
 	def __init__(self,width,height):
 		self.width,self.height = width,height
 
-class Replacement():
+class Replacement(object):
 	def __init__(self, start, end, text, prefix ='', suffix = ''):
 		self.start, self.end, self.text, self.prefix, self.suffix = start, end, text, prefix, suffix
 		self.selections = []

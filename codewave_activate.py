@@ -56,7 +56,7 @@ class CodewaveCommand(sublime_plugin.TextCommand):
 class CodewaveListener(sublime_plugin.EventListener):
 	def on_modified(self,view):
 		global codewaves
-		if 'codewaves' in vars():
+		if 'codewaves' in globals():
 			key = getBufferKey(view)
 			if key in codewaves :
 				cw = codewaves[key]
