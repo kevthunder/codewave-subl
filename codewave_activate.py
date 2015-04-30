@@ -60,5 +60,13 @@ class CodewaveListener(sublime_plugin.EventListener):
 			key = getBufferKey(view)
 			if key in codewaves :
 				cw = codewaves[key]
-				for callback in cw.editor.changeListeners :
-					callback()
+				if len(cw.editor.changeListeners) :
+					view.run_command("codewave_modified",{ "key" : key });
+					
+class CodewaveModifiedCommand(sublime_plugin.TextCommand):
+	def run(self, edit, key):
+		if key in codewaves :
+			cw = codewaves[key]
+			cw.editor.edit = edit
+			for callback in cw.editor.changeListeners :
+				callback()
