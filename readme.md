@@ -22,5 +22,4 @@ git clone https://github.com/kevthunder/codewave-subl.git Codewave
 
 ## ToDo
 
-* cmdIsValid on cmd fails for fallback with %name% wildcard
 * See the main project https://github.com/kevthunder/codewave

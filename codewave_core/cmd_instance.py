@@ -10,7 +10,7 @@ class CmdInstance(object):
 	def __init__(self, cmd = None, context = None):
 		self.cmd,self.context = cmd,context
 		self.content = self.cmdObj = None
-		self.indentLen = self.cmd = self.aliasedCmd = self.cmdOptions = None
+		self.indentLen = self.cmd = self.aliasedCmd = self.aliasedFinalCmd = self.cmdOptions = None
 		
 	def init(self):
 		if not self.isEmpty() or self.inited:
@@ -50,7 +50,7 @@ class CmdInstance(object):
 		if self.cmd is not None:
 			if self.cmdObj is not None:
 				return self.cmdObj.resultIsAvailable()
-			aliased = self.getAliased()
+			aliased = self.getAliasedFinal()
 			if aliased is not None:
 				return aliased.resultIsAvailable()
 			return self.cmd.resultIsAvailable()
@@ -67,12 +67,22 @@ class CmdInstance(object):
 			return res
 	def getAliased(self):
 		if self.cmd is not None:
-			if self.aliasedCmd is not None:
-				return self.aliasedCmd or None
+			if self.aliasedCmd is None:
+				self.getAliasedFinal()
+			return self.aliasedCmd or None
+	def getAliasedFinal(self):
+		if self.cmd is not None:
+			if self.aliasedFinalCmd is not None:
+				return self.aliasedFinalCmd or None
 			if self.cmd.aliasOf is not None:
-				aliasOf = self.cmd.aliasOf.replace('%name%',self.cmdName)
-				aliased = self.cmd._aliasedFromFinder(self.getFinder(aliasOf))
-				self.aliasedCmd = aliased or False
+				aliased = self.cmd
+				while aliased is not None and aliased.aliasOf is not None:
+					nspc, cmdName = util.splitNamespace(self.cmdName)
+					aliasOf = aliased.aliasOf.replace('%name%',cmdName)
+					aliased = aliased._aliasedFromFinder(self.getFinder(aliasOf))
+					if self.aliasedCmd is None:
+						self.aliasedCmd = aliased or False
+				self.aliasedFinalCmd = aliased or False
 				return aliased
 	def getOptions(self):
 		if self.cmd is not None:
@@ -100,7 +110,7 @@ class CmdInstance(object):
 		if self.cmd is not None:
 			if self.cmdObj is not None:
 				return self.cmdObj.execute()
-			cmd = self.getAliased() or self.cmd
+			cmd = self.getAliasedFinal() or self.cmd
 			cmd.init()
 			if cmd.executeFunct is not None:
 				return cmd.executeFunct(self)
@@ -108,7 +118,7 @@ class CmdInstance(object):
 		if self.cmd is not None:
 			if self.cmdObj is not None:
 				return self.cmdObj.result()
-			cmd = self.getAliased() or self.cmd
+			cmd = self.getAliasedFinal() or self.cmd
 			cmd.init()
 			if cmd.resultFunct is not None:
 				return cmd.resultFunct(self)

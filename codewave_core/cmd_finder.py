@@ -117,8 +117,13 @@ class CmdFinder():
 	def cmdIsValid(self,cmd):
 		if cmd is None:
 			return False
-		cmd.init()
-		return not self.mustExecute or cmd.isExecutable()
+		return not self.mustExecute or self.cmdIsExecutable(cmd)
+	def cmdIsExecutable(self,cmd):
+		names = self.getDirectNames()
+		if len(names) == 1:
+			return cmd.init().isExecutableWithName(names[0])
+		else:
+			return cmd.init().isExecutable()
 	def cmdScore(self,cmd):
 		score = cmd.depth
 		if cmd.name == 'fallback' :

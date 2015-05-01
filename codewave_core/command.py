@@ -65,11 +65,20 @@ class Command():
 	def isExecutable(self):
 		aliased = self.getAliased()
 		if aliased is not None:
-			return aliased.isExecutable()
+			return aliased.init().isExecutable()
 		for p in ['resultStr','resultFunct','cls','executeFunct']:
 			if getattr(self, p) is not None:
 				return True
 		return False
+	def isExecutableWithName(self,name):
+		if self.aliasOf is not None:
+			context = codewave_core.context.Context()
+			aliasOf = self.aliasOf.replace('%name%',name)
+			aliased = self._aliasedFromFinder(context.getFinder(aliasOf))
+			if aliased is not None:
+				return aliased.init().isExecutable()
+			return False
+		return self.isExecutable()
 	def resultIsAvailable(self):
 		aliased = self.getAliased()
 		if aliased is not None:

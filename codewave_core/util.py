@@ -188,7 +188,7 @@ def splitFirstNamespace(fullname,isSpace = False) :
 	return [parts.pop(0), ':'.join(parts) or None]
 
 def splitNamespace(fullname) :
-	if ":" in fullname:
+	if ":" not in fullname:
 		return [None,fullname]
 	parts = fullname.split(':')
 	name = parts.pop()
