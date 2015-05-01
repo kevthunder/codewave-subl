@@ -88,6 +88,7 @@ class Command():
 	def _aliasedFromFinder(self,finder):
 		finder.useFallbacks = False
 		finder.mustExecute = False
+		finder.useDetectors = False
 		return finder.find()
 	def getAliased(self):
 		if self.aliasOf is not None:
