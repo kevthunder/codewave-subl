@@ -226,6 +226,9 @@ def getCarretPos(txt, carretChar = '|'):
 	txt = txt.replace(carretChar+carretChar, ' ')
 	if carretChar in txt :
 		return txt.index(carretChar)
+		
+def isArray(arr):
+  return isinstance(arr, list)
 
 class PosCollection(object):
 	def __init__(self, obj):

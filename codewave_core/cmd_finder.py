@@ -7,7 +7,7 @@ import codewave_core.context as context
 class CmdFinder():
 	def __init__(self,names, **options):
 		
-		if isinstance(names, str):
+		if not util.isArray(names):
 			names = [names]
 		defaults = {
 			'parent' : None,
