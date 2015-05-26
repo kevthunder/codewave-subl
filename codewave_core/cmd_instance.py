@@ -10,10 +10,11 @@ class CmdInstance(object):
 	def __init__(self, cmd = None, context = None):
 		self.cmd,self.context = cmd,context
 		self.content = self.cmdObj = None
-		self.indentLen = self.cmd = self.aliasedCmd = self.aliasedFinalCmd = self.cmdOptions = None
+		self.inited = False
+		self.indentLen = self.aliasedCmd = self.aliasedFinalCmd = self.cmdOptions = None
 		
 	def init(self):
-		if not self.isEmpty() or self.inited:
+		if not self.isEmpty() and not self.inited:
 			self.inited = True
 			self._getCmdObj()
 			self._initParams()
@@ -43,7 +44,7 @@ class CmdInstance(object):
 	def _initParams(self):
 		self.named = self.getDefaults()
 	def _getParentNamespaces(self):
-		return array()
+		return []
 	def isEmpty(self):
 		return self.cmd is not None
 	def resultIsAvailable(self):
@@ -61,7 +62,7 @@ class CmdInstance(object):
 			aliased = self.getAliased()
 			if aliased is not None:
 				res = util.merge(res,aliased.getDefaults())
-			res = util.merge(res,cmd.defaults)
+			res = util.merge(res,self.cmd.defaults)
 			if self.cmdObj is not None:
 				res = util.merge(res,self.cmdObj.getDefaults())
 			return res
@@ -77,13 +78,13 @@ class CmdInstance(object):
 			if self.cmd.aliasOf is not None:
 				aliased = self.cmd
 				while aliased is not None and aliased.aliasOf is not None:
-					nspc, cmdName = util.splitNamespace(self.cmdName)
-					aliasOf = aliased.aliasOf.replace('%name%',cmdName)
-					aliased = aliased._aliasedFromFinder(self.getFinder(aliasOf))
+					aliased = aliased._aliasedFromFinder(self.getFinder(self.alterAliasOf(aliased.aliasOf)))
 					if self.aliasedCmd is None:
 						self.aliasedCmd = aliased or False
 				self.aliasedFinalCmd = aliased or False
 				return aliased
+	def alterAliasOf(self,aliasOf):
+		return aliasOf
 	def getOptions(self):
 		if self.cmd is not None:
 			if self.cmdOptions is not None:
@@ -98,7 +99,7 @@ class CmdInstance(object):
 		if options is not None and key in options:
 			return options[key]
 	def getParam(self,names, defVal = None):
-		if type(names) is not list :
+		if not util.isArray(names) :
 			names = [names]
 		for n in names:
 			if isinstance( n, int ) and n < len(self.params) :
@@ -106,6 +107,12 @@ class CmdInstance(object):
 			if n in self.named :
 				return self.named[n] 
 		return defVal
+	def ancestorCmds(self):
+		if self.context.codewave is not None and self.context.codewave.inInstance is not None:
+			return self.context.codewave.inInstance.ancestorCmdsAndSelf()
+		return []
+	def ancestorCmdsAndSelf(self):
+		return self.ancestorCmds() + [self.cmd]
 	def runExecuteFunct(self):
 		if self.cmd is not None:
 			if self.cmdObj is not None:
@@ -149,8 +156,4 @@ class CmdInstance(object):
 		else:
 			return text
 	def applyIndent(self,text):
-		if text is not None:
-			reg = re.compile(r'\n',re.M)
-			return re.sub(reg, "\n" + util.repeatToLength(" ",self.getIndent()),text)
-		else:
-			return text
+		return util.indentNotFirst(text,self.getIndent()," ")

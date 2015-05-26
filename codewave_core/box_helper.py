@@ -5,20 +5,27 @@ import codewave_core.logger as logger
 class BoxHelper():
 	def __init__(self, context, options = {}):
 		self.context = context
-		defaults = {
+		self.defaults = {
 			'deco': self.context.codewave.deco,
 			'pad': 2,
 			'width': 50,
 			'height': 3,
 			'openText': '',
 			'closeText': '',
+			'prefix': '',
+			'suffix': '',
 			'indent': 0
 		}
-		for key, val in defaults.items():
+		for key, val in self.defaults.items():
 			if key in options:
 				setattr(self,key,options[key])
 			else:
 				setattr(self,key,val)
+	def clone(self):
+		opt = {}
+		for key, val in self.defaults.items():
+				opt[key] = getattr(self,key)
+		return BoxHelper(self.context,opt)
 	def draw(self,text):
 		return self.startSep() + "\n" + self.lines(text) + "\n"+ self.endSep()
 	def wrapComment(self,str):
@@ -28,10 +35,10 @@ class BoxHelper():
 		return self.wrapComment(self.decoLine(len))
 	def startSep(self):
 		ln = self.width + 2 * self.pad + 2 * len(self.deco) - len(self.openText)
-		return self.wrapComment(self.openText+self.decoLine(ln))
+		return self.prefix + self.wrapComment(self.openText+self.decoLine(ln))
 	def endSep(self):
 		ln = self.width + 2 * self.pad + 2 * len(self.deco) - len(self.closeText)
-		return self.wrapComment(self.closeText+self.decoLine(ln))
+		return self.wrapComment(self.closeText+self.decoLine(ln)) + self.suffix
 	def decoLine(self,len):
 		return util.repeatToLength(self.deco, len)
 	def padding(self): 
@@ -53,20 +60,58 @@ class BoxHelper():
 					self.padding() + 
 					self.deco
 			))
+	def left(self):
+		return self.context.wrapCommentLeft(self.deco + self.padding())
+	def right(self):
+		return self.context.wrapCommentRight(self.padding() + self.deco)
 	def removeIgnoredContent(self,text):
 		return self.context.codewave.removeMarkers(self.context.codewave.removeCarret(text))
 	def textBounds(self,text):
 		return util.getTxtSize(self.removeIgnoredContent(text))
 	def getBoxForPos(self,pos):
-		startFind = self.context.wrapCommentLeft(self.deco + self.deco)
-		endFind = self.context.wrapCommentRight(self.deco + self.deco)
-		start = self.context.codewave.findPrev(pos.start, startFind)
-		end = self.context.codewave.findNext(pos.end, endFind)
-		if start is not None and end is not None:
-			 return util.Pos(start,end + len(endFind))
+		depth = self.getNestedLvl(pos.start)
+		if depth > 0:
+			left = self.left()
+			curLeft = util.repeat(left,depth-1)
+			
+			clone = self.clone()
+			placeholder = "###PlaceHolder###"
+			clone.width = len(placeholder)
+			clone.openText = clone.closeText = self.deco + self.deco + placeholder + self.deco + self.deco
+			escPlaceholder = util.escapeRegExp("###PlaceHolder###")
+			
+			
+			startFind = re.compile(util.escapeRegExp(curLeft + clone.startSep()).replace(escPlaceholder,'.*'))
+			endFind = re.compile(util.escapeRegExp(curLeft + clone.endSep()).replace(escPlaceholder,'.*'))
+			
+			
+			pair = util.Pair(startFind,endFind,{
+				'validMatch': self.validPairMatch
+			})
+			res = pair.wrapperPos(pos,self.context.codewave.editor.text)
+			
+			if res is not None:
+				res.start += len(curLeft)
+				return res
+
+	def validPairMatch(self,match):
+		left = self.left()
+		f = self.context.codewave.findAnyNext(match.start() ,[left,"\n","\r"],-1)
+		return not f is not None or f.str != left
+
+	def getNestedLvl(self,index):
+		depth = 0
+		left = self.left()
+		while True:
+			f = self.context.codewave.findAnyNext(index ,[left,"\n","\r"],-1)
+			if f is None or f.str != left:
+					break
+			index = f.pos
+			depth+=1
+		return depth
 	def getOptFromLine(self,line,getPad=True):
 		rStart = re.compile("(\\s*)("+util.escapeRegExp(self.context.wrapCommentLeft(self.deco))+")(\\s*)")
-		rEnd = re.compile("(\\s*)("+util.escapeRegExp(self.context.wrapCommentRight(self.deco))+")")
+		rEnd = re.compile("(\\s*)("+util.escapeRegExp(self.context.wrapCommentRight(self.deco))+")(\n|$)")
 		resStart = rStart.search(line)
 		resEnd = rEnd.search(line)
 		if resStart is not None and resEnd is not None:

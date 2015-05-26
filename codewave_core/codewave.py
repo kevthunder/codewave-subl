@@ -16,6 +16,7 @@ class Codewave():
 	def __init__(self,editor, **options):
 		self.editor = editor
 		self.closingPromp = self.context = None
+		init()
 		self.marker = '[[[[codewave_marquer]]]]'
 		self.vars = {}
 		
@@ -29,6 +30,9 @@ class Codewave():
 			'inInstance' : None
 		}
 		self.parent = options['parent'] if 'parent' in options else None
+
+
+		self.nested = self.parent.nested+1 if self.parent is not None else 0
 		
 		for key, val in defaults.items():
 			if key in options:
@@ -58,7 +62,7 @@ class Codewave():
 	def runAtMultiPos(self,multiPos):
 		if len(multiPos) > 0:
 			cmd = self.commandOnPos(multiPos[0].end)
-			if cmd is not None :
+			if cmd is not None:
 				if len(multiPos) > 1:
 					cmd.setMultiPos(multiPos)
 				cmd.init()
@@ -126,13 +130,6 @@ class Codewave():
 		return i
 	def isEndLine(self,pos):
 		return self.editor.textSubstr(pos,pos+1) == "\n" or pos + 1 >= self.editor.textLen()
-	def findLineStart(self,pos):
-		p = self.findAnyNext(pos ,["\n"], -1)
-		return p.pos+1 if p is not None else 0
-
-	def findLineEnd(self,pos): 
-		p = self.findAnyNext(pos ,["\n","\r"])
-		return p.pos if p is not None else self.editor.textLen()
 	def findPrevBraket(self,start):
 		return self.findNextBraket(start,-1)
 	def findNextBraket(self,start,direction = 1):
@@ -146,20 +143,7 @@ class Codewave():
 		if f is not None:
 			return f.pos 
 	def findAnyNext(self,start,strings,direction = 1):
-		if direction > 0:
-			text = self.editor.textSubstr(start,self.editor.textLen())
-		else:
-			text = self.editor.textSubstr(0,start)
-		bestPos = bestStr = None
-		for stri in strings:
-			pos = text.find(stri) if direction > 0  else text.rfind(stri)
-			if pos != -1:
-				if not bestPos is not None or bestPos*direction > pos*direction:
-					bestPos = pos
-					bestStr = stri
-		if bestStr is not None:
-			return util.StrPos((bestPos + start if direction > 0 else bestPos),bestStr)
-		return None
+		return self.editor.findAnyNext(start,strings,direction)
 	def findMatchingPair(self,startPos,opening,closing,direction = 1):
 		pos = startPos
 		nested = 0
@@ -222,6 +206,10 @@ class Codewave():
 	def removeMarkers(self,text):
 		return text.replace(self.marker,'')
 
+inited = False
 def init():
-	command.initCmds()
-	command.loadCmds()
+	global inited
+	if not inited:
+		inited = True
+		command.initCmds()
+		command.loadCmds()

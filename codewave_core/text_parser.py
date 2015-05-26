@@ -6,6 +6,7 @@ class TextParser(editor.Editor):
 		self._text = text
 		self.namespace = 'text_parser'
 		self.target = None
+		super(self.__class__, self).__init__()
 	@property
 	def text(self):
 		return self._text

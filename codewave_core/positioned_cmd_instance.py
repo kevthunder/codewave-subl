@@ -13,7 +13,6 @@ class PositionedCmdInstance(cmd_instance.CmdInstance):
 		self.codewave,self.pos,self.str = codewave,pos,str
 		self.replaceStart = self.replaceEnd = None
 		self.multiPos = self.inBox = self.closingPos = None
-		self._prevEOL = self._nextEOL = self._rawWithFullLines = self._sameLinesPrefix = self._sameLinesSuffix = None
 		self.inited = False
 		if not self.isEmpty():
 			self._checkCloser()
@@ -44,9 +43,8 @@ class PositionedCmdInstance(cmd_instance.CmdInstance):
 		self.rawParams = " ".join(parts)
 	def _parseParams(self,params):
 		self.params = []
-		self.named = {}
+		self.named = self.getDefaults()
 		if self.cmd is not None: 
-			self.named.update(self.cmd.getDefaults())
 			nameToParam = self.getOption('nameToParam')
 			if nameToParam is not None :
 				self.named[nameToParam] = self.cmdName
@@ -108,7 +106,7 @@ class PositionedCmdInstance(cmd_instance.CmdInstance):
 			self.pos = self.pos - len(cl)
 			self.str = self.codewave.editor.textSubstr(self.pos,endPos)
 			self._removeCommentFromContent()
-		elif cl in self.sameLinesPrefix() and cr in self.sameLinesSuffix():
+		elif cl in self.getPos().sameLinesPrefix() and cr in self.getPos().sameLinesSuffix():
 			self.inBox = 1
 			self._removeCommentFromContent()
 	def _removeCommentFromContent(self):
@@ -125,26 +123,6 @@ class PositionedCmdInstance(cmd_instance.CmdInstance):
 		self.parent = p.init() if p is not None else None
 	def setMultiPos(self,multiPos):
 		self.multiPos = multiPos
-	def prevEOL(self):
-		if self._prevEOL is None:
-			self._prevEOL = self.codewave.findLineStart(self.pos)
-		return self._prevEOL
-	def nextEOL(self):
-		if self._nextEOL is None:
-			self._nextEOL = self.codewave.findLineEnd(self.getEndPos())
-		return self._nextEOL
-	def rawWithFullLines(self):
-		if self._rawWithFullLines is None:
-			self._rawWithFullLines = self.codewave.editor.textSubstr(self.prevEOL(),self.nextEOL())
-		return self._rawWithFullLines
-	def sameLinesPrefix(self):
-		if self._sameLinesPrefix is None:
-			self._sameLinesPrefix = self.codewave.editor.textSubstr(self.prevEOL(),self.pos)
-		return self._sameLinesPrefix
-	def sameLinesSuffix(self):
-		if self._sameLinesSuffix is None:
-			self._sameLinesSuffix = self.codewave.editor.textSubstr(self.getEndPos(),self.nextEOL())
-		return self._sameLinesSuffix
 	def _getCmdObj(self):
 		self.getCmd()
 		self._checkBox()
@@ -181,12 +159,16 @@ class PositionedCmdInstance(cmd_instance.CmdInstance):
 		return nspcs
 	def _removeBracket(self,str):
 		return str[len(self.codewave.brakets):len(str)-len(self.codewave.brakets)]
+	def alterAliasOf(self,aliasOf):
+		nspc, cmdName = util.splitNamespace(self.cmdName)
+		return aliasOf.replace('%name%',cmdName)
 	def isEmpty(self):
 		return self.str == self.codewave.brakets + self.codewave.closeChar + self.codewave.brakets or self.str == self.codewave.brakets + self.codewave.brakets
 	def execute(self):
 		if self.isEmpty():
-			if self.codewave.closingPromp is not None and self.codewave.closingPromp.whithinOpenBounds(self.pos + len(self.codewave.brakets)) is not None:
+			if self.codewave.closingPromp is not None and self.codewave.closingPromp.whithinOpenBounds(util.Pos(self.pos + len(self.codewave.brakets))) is not None:
 				self.codewave.closingPromp.cancel()
+				pass
 			else:
 				self.replaceWith('')
 		elif self.cmd is not None:
@@ -203,14 +185,16 @@ class PositionedCmdInstance(cmd_instance.CmdInstance):
 	def getEndPos(self):
 		return self.pos+len(self.str)
 	def getPos(self):
-		return util.Pos(self.pos,self.pos+len(self.str))
+		return util.Pos(self.pos,self.pos+len(self.str)).withEditor(self.codewave.editor)
+	def getOpeningPos(self):
+		return util.Pos(self.pos,self.pos+len(self.opening)).withEditor(self.codewave.editor)
 	def getIndent(self):
 		if self.indentLen is None:
 			if self.inBox is not None:
 				helper = box_helper.BoxHelper(self.context)
-				self.indentLen = len(helper.removeComment(self.sameLinesPrefix()))
+				self.indentLen = len(helper.removeComment(self.getPos().sameLinesPrefix()))
 			else:
-				self.indentLen = self.pos - self.codewave.findLineStart(self.pos)
+				self.indentLen = self.pos - self.getPos().prevEOL()
 		return self.indentLen
 	def removeIndentFromContent(self,text):
 		if text is not None:
@@ -219,18 +203,19 @@ class PositionedCmdInstance(cmd_instance.CmdInstance):
 		else:
 			return text
 	def alterResultForBox(self,repl):
+		original = repl.copy()
 		helper = box_helper.BoxHelper(self.context)
-		helper.getOptFromLine(self.rawWithFullLines(),False)
+		helper.getOptFromLine(original.textWithFullLines(),False)
 		if self.getOption('replaceBox'):
-			box = helper.getBoxForPos(self.getPos())
+			box = helper.getBoxForPos(original)
 			repl.start, repl.end = box.start, box.end
 			self.indentLen = helper.indent
 			repl.text = self.applyIndent(repl.text)
 		else:
 			repl.text = self.applyIndent(repl.text)
-			repl.start = self.prevEOL()
-			repl.end = self.nextEOL()
-			res = helper.reformatLines(self.sameLinesPrefix() + self.codewave.marker + repl.text + self.codewave.marker + self.sameLinesSuffix(), {'multiline':False})
+			repl.start = original.prevEOL()
+			repl.end = original.nextEOL()
+			res = helper.reformatLines(original.sameLinesPrefix() + self.codewave.marker + repl.text + self.codewave.marker + original.sameLinesSuffix(), {'multiline':False})
 			repl.prefix,repl.text,repl.suffix = res.split(self.codewave.marker)
 		return repl
 	def getCursorFromResult(self,repl):
@@ -244,26 +229,26 @@ class PositionedCmdInstance(cmd_instance.CmdInstance):
 	def checkMulti(self,repl):
 		if self.multiPos is not None and len(self.multiPos) > 1:
 			replacements = [repl]
-			originalText = repl.originalTextWith(self.codewave.editor)
+			originalText = repl.originalText()
 			for i, pos in enumerate(self.multiPos):
 				if i == 0:
 					originalPos = pos.start
 				else:
 					newRepl = repl.copy().applyOffset(pos.start-originalPos)
-					if newRepl.originalTextWith(self.codewave.editor) == originalText:
+					if newRepl.originalText() == originalText:
 						replacements.append(newRepl)
-					logger.log(replacements)
 			return replacements
 		else:
 			return [repl]
 	def replaceWith(self,text):
-		repl =  util.Replacement(self.pos,self.getEndPos(),text)
-		
+		self.applyReplacement(util.Replacement(self.pos,self.getEndPos(),text))
+	def applyReplacement(self,repl):
+		repl.withEditor(self.codewave.editor)
 		if self.inBox is not None:
 			self.alterResultForBox(repl)
 		else:
 			repl.text = self.applyIndent(repl.text)
-			
+
 		cursorPos = self.getCursorFromResult(repl)
 		repl.selections = [util.Pos(cursorPos, cursorPos)]
 		replacements = self.checkMulti(repl)

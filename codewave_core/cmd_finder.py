@@ -1,12 +1,17 @@
 import codewave_core.command as command
-import codewave_core.core_cmds as core_cmds
 import codewave_core.logger as logger
 import codewave_core.util as util
 import codewave_core.context as context
 
+import codewave_core.cmds.core
+import codewave_core.cmds.html
+import codewave_core.cmds.js
+import codewave_core.cmds.php
+
 class CmdFinder():
 	def __init__(self,names, **options):
-		
+
+		self.posibilities = None
 		if not util.isArray(names):
 			names = [names]
 		defaults = {
@@ -40,10 +45,10 @@ class CmdFinder():
 		self.triggerDetectors()
 		self.cmd = self.findIn(self.root)
 		return self.cmd
-	def getPosibilities(self):
-		self.triggerDetectors()
-		path = list(self.path)
-		return self.findPosibilitiesIn(self.root,path)
+#	def getPosibilities(self):
+#		self.triggerDetectors()
+#		path = list(self.path)
+#		return self.findPosibilitiesIn(self.root,path)
 	def getNamesWithPaths(self):
 		paths = {}
 		for name in self.names :
@@ -90,13 +95,13 @@ class CmdFinder():
 		self.root.init()
 		posibilities = []
 		for space, names in self.getNamesWithPaths().items():
-			next = self.getCmdFollowAlias(space)
-			if next is not None :
+			nexts = self.getCmdFollowAlias(space)
+			for next in nexts:
 				posibilities += CmdFinder(names, parent=self, root=next).findPosibilities()
 		for nspc in self.context.getNameSpaces():
 			nspcName,rest = util.splitFirstNamespace(nspc,True)
-			next = self.getCmdFollowAlias(nspcName)
-			if next is not None :
+			nexts = self.getCmdFollowAlias(nspcName)
+			for next in nexts:
 				posibilities += CmdFinder(self.applySpaceOnNames(nspc), parent=self, root=next).findPosibilities()
 		for name in self.getDirectNames():
 			direct = self.root.getCmd(name)
@@ -106,18 +111,25 @@ class CmdFinder():
 			fallback = self.root.getCmd('fallback')
 			if self.cmdIsValid(fallback):
 				posibilities.append(fallback)
+			self.posibilities = posibilities
 		return posibilities
 	def getCmdFollowAlias(self,name):
 		cmd = self.root.getCmd(name)
 		if cmd is not None :
 			cmd.init()
 			if cmd.aliasOf is not None:
-				return cmd.getAliased()
-		return cmd
+				return [cmd,cmd.getAliased()]
+		return [cmd]
 	def cmdIsValid(self,cmd):
 		if cmd is None:
 			return False
+		if cmd.name != 'fallback' and cmd in self.ancestors():
+			return False
 		return not self.mustExecute or self.cmdIsExecutable(cmd)
+	def ancestors(self):
+		if self.codewave is not None and self.codewave.inInstance is not None:
+			return self.codewave.inInstance.ancestorCmdsAndSelf()
+		return []
 	def cmdIsExecutable(self,cmd):
 		names = self.getDirectNames()
 		if len(names) == 1:

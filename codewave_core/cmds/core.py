@@ -135,7 +135,7 @@ def initCmds():
 					'cmds' : {
 						'intro':{
 							'result' : textwrap.dedent("""
-								Codewave allows you to make you own commands (or abbreviations) 
+								Codewave allows you to make your own commands (or abbreviations) 
 								put your content inside "source" the do "save". Try adding any 
 								text that is on your mind.
 								~~!edit my_new_command|~~
@@ -200,6 +200,9 @@ def initCmds():
 		},
 		'close':{
 			'cls' : CloseCmd
+		},
+		'param':{
+			'result' : getParam
 		},
 		'edit':{
 			'cmds' : editCmdSetCmds({
@@ -269,111 +272,6 @@ def initCmds():
 		
 	})
 	
-	html = command.cmds.addCmd(command.Command('html'))
-	html.addCmds({
-		'fallback':{
-			'aliasOf' : 'core:emmet',
-			'defaults' : {'lang':'html'},
-			'nameToParam' : 'abbr'
-		},
-	})
-	
-	css = command.cmds.addCmd(command.Command('css'))
-	css.addCmds({
-		'fallback':{
-			'aliasOf' : 'core:emmet',
-			'defaults' : {'lang':'css'},
-			'nameToParam' : 'abbr'
-		},
-	})
-	
-	php = command.cmds.addCmd( command.Command('php'))
-	php.addDetector(detector.PairDetector({
-		'result': 'php:inner',
-		'opener': '<?php',
-		'closer': '?>',
-		'else': 'php:outer'
-	}))
-
-	phpOuter = php.addCmd(command.Command('outer'))
-	phpOuter.addCmds({
-		'fallback':{
-			'aliasOf' : 'php:inner:%name%',
-			'beforeExecute' : closePhpForContent,
-			'alterResult' : wrapWithPhp
-		},
-		'comment': '<?php /* ~~content~~ */ ?>',
-		'php': '<?php\n\t~~content~~|\n?>',
-	})
-	
-	phpInner = php.addCmd(command.Command('inner'))
-	phpInner.addCmds({
-		'comment': '/* ~~content~~ */',
-		'if':   'if(|){\n\t~~content~~\n}',
-		'info': 'phpinfo();',
-		'echo': 'echo ${id}',
-		'e':{   'aliasOf': 'php:inner:echo' },
-		'class': textwrap.dedent("""
-			class | {
-			\tfunction __construct() {
-			\t\t~~content~~
-			\t}
-			}
-			"""),
-		'c':{     'aliasOf': 'php:inner:class' },
-		'function':	'function |() {\n\t~~content~~\n}',
-		'funct':{ 'aliasOf': 'php:inner:function' },
-		'f':{     'aliasOf': 'php:inner:function' },
-		'array':  '$| = array();',
-		'a':	    'array()',
-		'for': 		'for ($i = 0; $i < $|; $i+=1) {\n\t~~content~~\n}',
-		'foreach':'foreach ($| as $key => $val) {\n\t~~content~~\n}',
-		'each':{  'aliasOf': 'php:inner:foreach' },
-		'while':  'while(|) {\n\t~~content~~\n}',
-		'whilei': '$i = 0;\nwhile(|) {\n\t~~content~~\n\t$i+=1;\n}',
-		'ifelse': 'if( | ) {\n\t~~content~~\n} else {\n\t\n}',
-		'ife':{   'aliasOf': 'php:inner:ifelse' },
-		'switch': textwrap.dedent("""
-			switch( | ) { 
-			\tcase :
-			\t\t~~content~~
-			\t\tbreak;
-			\tdefault :
-			\t\t
-			\t\tbreak;
-			}
-			""")
-	})
-	
-	js = command.cmds.addCmd(command.Command('js'))
-	command.cmds.addCmd(command.Command('javascript',{ 'aliasOf': 'js' }))
-	js.addCmds({
-		'comment': '/* ~~content~~ */',
-		'if':  'if(|){\n\t~~content~~\n}',
-		'log':  'if(window.console){\n\tconsole.log(~~content~~|)\n}',
-		'function':	'function |() {\n\t~~content~~\n}',
-		'funct':{ 'aliasOf': 'js:function' },
-		'f':{     'aliasOf': 'js:function' },
-		'for': 		'for (var i = 0; i < |; i+=1) {\n\t~~content~~\n}',
-		'forin':'foreach (var val in |) {\n\t~~content~~\n}',
-		'each':{  'aliasOf': 'js:forin' },
-		'foreach':{  'aliasOf': 'js:forin' },
-		'while':  'while(|) {\n\t~~content~~\n}',
-		'whilei': 'var i = 0;\nwhile(|) {\n\t~~content~~\n\ti+=1;\n}',
-		'ifelse': 'if( | ) {\n\t~~content~~\n} else {\n\t\n}',
-		'ife':{   'aliasOf': 'js:ifelse' },
-		'switch':	textwrap.dedent("""
-			switch( | ) { 
-			\tcase :
-			\t\t~~content~~
-			\t\tbreak;
-			\tdefault :
-			\t\t
-			\t\tbreak;
-			}
-			"""),
-	})
-	
 command.cmdInitialisers.add(initCmds)
 
 def setVarCmd(name, base = {}) :
@@ -417,19 +315,19 @@ def exec_parent(instance):
 		instance.replaceEnd = instance.parent.replaceEnd
 		return res
 def getContent(instance):
+	affixes_empty = instance.getParam(['affixes_empty'],False)
+	prefix = instance.getParam(['prefix'],'')
+	suffix = instance.getParam(['suffix'],'')
 	if instance.codewave.inInstance is not None:
-		return instance.codewave.inInstance.content or ''
-def wrapWithPhp(result,instance):
-	regOpen = re.compile(r"<\?php\s([\n\r\s]+)")
-	regClose = re.compile(r"([\n\r\s]+)\s\?>")
-	return '<?php ' + re.sub(regOpen, r'\1<?php ', re.sub(regClose, r' ?>\1', result)) + ' ?>'
+		return prefix + (instance.codewave.inInstance.content or '') + suffix
+	if affixes_empty:
+		return prefix + suffix
 def renameCommand(instance):
 	savedCmds = storage.load('cmds')
 	origninalName = instance.getParam([0,'from'])
 	newName = instance.getParam([1,'to'])
 	if origninalName is not None and newName is not None:
 		cmd = instance.context.getCmd(origninalName)
-		console.log(cmd)
 		if origninalName in savedCmds and cmd is not None:
 			if not ':' in newName:
 				newName = cmd.fullName.replace(origninalName,'') + newName
@@ -468,12 +366,15 @@ def aliasCommand(instance):
 			cmd = cmd.getAliased() or cmd
 			# unless ':' in alias
 				# alias = cmd.fullName.replace(name,'') + alias
-			command.saveCmd(alias, { aliasOf: cmd.fullName })
+			command.saveCmd(alias, { 'aliasOf': cmd.fullName })
 			return ""
 		else:
 			return "~~not_found~~"
-def closePhpForContent(instance):
-	instance.content = ' ?>'+(instance.content or '')+'<?php '
+      
+def getParam(instance):
+	if instance.codewave.inInstance is not None:
+		return instance.codewave.inInstance.getParam(instance.params,instance.getParam(['def','default']))
+  
 class BoxCmd(command.BaseCommand):
 	def init(self):
 		self.helper = box_helper.BoxHelper(self.instance.context)
@@ -483,6 +384,8 @@ class BoxCmd(command.BaseCommand):
 			self.helper.closeText = self.instance.codewave.brakets + self.instance.codewave.closeChar + self.cmd.split(" ")[0] + self.instance.codewave.brakets
 		self.helper.deco = self.instance.codewave.deco
 		self.helper.pad = 2
+		self.helper.prefix = self.instance.getParam(['prefix'],'')
+		self.helper.suffix = self.instance.getParam(['suffix'],'')
 		self._bounds = None
 		
 	def height(self):
@@ -530,10 +433,20 @@ class CloseCmd(command.BaseCommand):
 	def init(self):
 		self.helper = box_helper.BoxHelper(self.instance.context)
 	def execute(self):
+		prefix = self.helper.prefix = self.instance.getParam(['prefix'],'')
+		suffix = self.helper.suffix = self.instance.getParam(['suffix'],'')
 		box = self.helper.getBoxForPos(self.instance.getPos())
+		required_affixes = self.instance.getParam(['required_affixes'],True)
+		if not required_affixes:
+			self.helper.prefix = self.helper.suffix = ''
+			box2 = self.helper.getBoxForPos(self.instance.getPos())
+			if box2 is not None and (box is None or box.start < box2.start - len(prefix) or box.end > box2.end + len(suffix)):
+				box = box2
 		if box is not None:
-			self.instance.codewave.editor.spliceText(box.start,box.end,'')
-			self.instance.codewave.editor.setCursorPos(box.start)
+			depth = self.helper.getNestedLvl(self.instance.getPos().start)
+			if depth < 2:
+				self.instance.inBox = None
+			self.instance.applyReplacement(util.Replacement(box.start,box.end,''))
 		else:
 			self.instance.replaceWith('')
 
@@ -546,18 +459,17 @@ class EditCmd(command.BaseCommand):
 			self.finder.useFallbacks = False
 			self.cmd = self.finder.find()
 		self.editable = self.cmd.isEditable() if self.cmd is not None else True
-		self.content = self.instance.content
 	def getOptions(self):
 		return {
 			'allowedNamed': ['cmd']
 		}
 	def result(self):
-		if self.content:
+		if self.instance.content:
 			return self.resultWithContent()
 		else:
 			return self.resultWithoutContent()
 	def resultWithContent(self):
-			parser = self.instance.getParserForText(self.content)
+			parser = self.instance.getParserForText(self.instance.content)
 			parser.parseAll()
 			data = {}
 			for p in editCmdProps:

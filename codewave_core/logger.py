@@ -12,8 +12,8 @@ def log(*arguments):
 		out += str(msg)+' '
 		if WRITE_FUNCT is not None :
 			WRITE_FUNCT(out+'\n')
-		else : 
-			raise Exception("Logger write function is not setted")
+		# else : 
+			# raise Exception("Logger write function is not setted")
 
 def step(prop):
 	global last_log
