@@ -26,31 +26,30 @@ def initCmds():
 				The text editor helper
 				~~/quote_carret~~
 				
-				When using Codewave you will be writing commands directly within 
+				When using Codewave you will be writing commands within 
 				your text editor editing windows. These commands must be placed
-				between two pairs in "~" (tilde) and then with you text either 
-				inside or at the command, they can be executed by pressing 
-				"ctrl"+"shift"+"e".
+				between two pairs in "~" (tilde) and then, they can be executed by pressing
+				"ctrl"+"shift"+"e", with your cursor inside the command
 				Ex: ~~!hello~~
 				
-				One good thing about codewave is that you dont need to actually
-				type any "~" (tilde), because pressing "ctrl"+"shift"+"e" will
-				add them if you are not allready within a command
+				You dont need to actually type any "~" (tilde).
+				Pressing "ctrl"+"shift"+"e" will add them if you are not already
+				within a command.
 				
-				Codewave does not relly use UI to display any information. 
-				instead, it uses text within code comments to mimic UIs. The 
-				generated comment blocks will be refered as windows in the help
-				sections.
+				Codewave does not use UI to display any information. 
+				Instead, it uses text within code comments to mimic UIs. 
+				The generated comment blocks will be referred to as windows 
+				in the help sections.
 				
-				To close self window (ie. remove self comment bloc), press 
-				"ctrl"+"shift"+"e" with you cursor on the line bellow.
+				To close self window (i.e. remove self comment block), press 
+				"ctrl"+"shift"+"e" with your cursor on the line bellow.
 				~~!close|~~
 				
-				Use the following command for a walkthrough in some in many
-				features in codewave
+				Use the following command for a walkthrough in some in the many
+				features in Codewave
 				~~!help:get_started~~ or ~~!help:demo~~
 				
-				List in all helps subjects 
+				List in all help subjects 
 				~~!help:subjects~~ or ~~!help:sub~~ 
 				
 				~~!close~~
@@ -82,47 +81,47 @@ def initCmds():
 						~~help:editing:intro~~
 						~~quote_carret~~
 						
-						for more information on creating your own commands, see:
+						For more information on creating your own commands, see:
 						~~!help:editing~~
 						
-						Codewave come with many prexisting commands. Here an example in 
-						javascript abreviations
+						Codewave comes with many pre-existing commands. Here is an example 
+						in JavaScript abbreviations
 						~~!js:f~~
 						~~!js:if~~
 							~~!js:log~~"~~!hello~~"~~!/js:log~~
 						~~!/js:if~~
 						~~!/js:f~~
 						
-						CodeWave come with the exellent Emmet ( http://emmet.io/ ) to 
-						provide event more abreviations. Emmet will fire automaticaly if
-						you are in a html or css file and no other command in the same 
-						name were defined.
+						CodeWave comes with the excellent Emmet ( http://emmet.io/ ) to 
+						provide event more abbreviations. Emmet abbreviations will be 
+						used automatically if you are in a HTML or CSS file.
 						~~!ul>li~~ (if you are in a html doccument)
 						~~!emmet ul>li~~
 						~~!emmet m2 css~~
 						
-						Commands are stored in name spaces and some in the namespaces are
-						active depending in the context or they can be called explicitly. 
-						The two following commands are the same and will display the 
-						currently  active namespace. The first command command works 
-						because the core namespace is active.
+						Commands are stored in namespaces. The same command can have 
+						different results depending on the namespace.
+						~~!js:each~~
+						~~!php:outer:each~~
+						~~!php:inner:each~~
+
+						Some in the namespaces are active depending on the context. The 
+						following commands are the same and will display the currently
+						active namespace. The first command command works because the 
+						core namespace is active.
 						~~!namespace~~
 						~~!core:namespace~~
 						
-						you can make an namespace active with the following command.
+						You can make a namespace active with the following command.
 						~~!namespace php~~
 						
 						Check the namespaces again
 						~~!namespace~~
 						
-						All the dialogs(windows) in codewave are made with the command 
-						"box" and you can use it in your own commands. you can also use a
-						"close" command to make it easy to get rid in the window.
-						~~!box~~
-						The box will scale with the content you put in it
-						~~!close|~~
-						~~!/box~~
-						
+						In addition to detecting the document type, Codewave can detect the
+						context from the surrounding text. In a PHP file, it means Codewave 
+						will add the PHP tags when you need them.
+
 						~~/quote_carret~~
 						~~!close|~~
 						~~/box~~
@@ -152,9 +151,19 @@ def initCmds():
 						~~box~~
 						~~help:editing:intro~~
 						
+						All the windows in codewave are made with the command "box". 
+						They are meant to display texts that should not remain in your code. 
+						They are valid comments in your current language and the command "close" 
+						can be user to be removed them rapidly. You can make your own command
+						with them if you need to display some text temporarily.
+						~~!box~~
+						The box will scale with the content you put in it
+						~~!close|~~
+						~~!/box~~
+
 						~~quote_carret~~
-						When you make your command you may need to tell where the text cursor 
-						will be located once the command is executed. To do that, use a "|" 
+						When you create a command, you may want to specify where the cursor 
+						will be located once the command is expanded. To do that, use a "|" 
 						(Vertical bar). Use 2 in them if you want to print the actual 
 						character.
 						~~!box~~
@@ -162,14 +171,20 @@ def initCmds():
 						two : ||
 						~~!/box~~
 						
-						If you want to print a command without having it evalute when 
-						the command is executed, use a "!" exclamation mark.
+						You can also use the "quote_carret" command that will escape any 
+						vertical bars that are between it's opening and closing tag
+						~~!quote_carret~~
+						|
+						~~!/quote_carret~~
+
+						Commands inside other commands will be expanded automatically.
+						If you want to print a command without having it expand when 
+						the parent command is expanded, use a "!" (exclamation mark).
 						~~!!hello~~
 						
-						for commands that have both a openig and a closing tag, you can use:
+						For commands that have both an opening and a closing tag, you can use
 						the "content" command. "content" will be replaced with the text
-						that is between tha tags. Look at the code in the following command
-						for en example in how it can be used.:
+						that is between the tags. Here is an example in how it can be used.
 						~~!edit php:inner:if~~
 						
 						~~/quote_carret~~
